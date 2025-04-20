@@ -1,0 +1,24 @@
+{
+    "name": "Worker Dev",
+    "dockerComposeFile": [
+      "../../docker-compose.yml",
+      "../../docker-compose.override.yml"
+    ],
+    "service": "worker",
+    "workspaceFolder": "/app",
+    "runServices":["api","postgres", "mosquitto","worker"],
+    "customizations": {
+      "vscode": {
+        "settings": {
+          "terminal.integrated.defaultProfile.linux": "bash"
+        },
+        "extensions": [
+          "ms-python.python",
+          "ms-python.vscode-pylance"
+        ]
+      }
+    },
+    "forwardPorts": [8000, 5432, 1883],
+    "postCreateCommand": "pip install -r requirements.txt"
+}
+  

@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  api:
+    volumes:
+      - ./backend/api:/app
+    environment:
+      DEBUG: "1"
+    command: ["sh", "-c", "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --reload"]
+
+  worker:
+    volumes:
+      - ./backend/worker:/app
+    environment:
+      DEBUG: "1"
+    command: ["sh", "-c", "python ./app/my_main.py"]

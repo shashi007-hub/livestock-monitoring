@@ -1,0 +1,6 @@
+numpy>=1.20.0
+opencv-python>=4.11.0.86
+onnxruntime>=1.8.0
+Pillow>=9.0.0
+paho-mqtt
+psutil
