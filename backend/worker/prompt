@@ -1,0 +1,6 @@
+let us edit this file
+- let us have a seperate queue for each topic
+- when the number of messages inside a queue for a topic increase a particular threshold all those messages should be sent to run_inference and publish as a list
+- the run_inference_and_publish muyst send the list to the pipeline for the particular sensor and the pipeline must perform inferenece on all those data ponits aggregated and run a metric like average on those inference reults and then 
+- execute a post inference action if required
+- write reults to db

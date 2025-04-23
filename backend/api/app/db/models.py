@@ -36,6 +36,7 @@ class Bovine(Base):
     breed = Column(SQLEnum(BreedType), nullable=False)
     location = Column(String, nullable=True)
     image_data = Column(LargeBinary, nullable=True)  # Store the actual image bytes
+    owner_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # Foreign key to the User table
     
     # Self-referencing relationships for father and mother
     father_id = Column(Integer, ForeignKey('bovines.id'), nullable=True)  # Father is a reference to Bovine's id
