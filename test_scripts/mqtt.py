@@ -4,6 +4,8 @@
 import datetime
 import json
 import paho.mqtt.client as mqtt
+import time
+import random
 
 def publish_message(broker, port, topic, message):
     # Create an MQTT client instance
@@ -29,8 +31,11 @@ if __name__ == "__main__":
     topics = ["inference/microphone"]  # Replace with your desired topic
     import random
     message = {
-        "bovine_id": "2",
+        "bovine_id": "3",
+        "audio":[],
         "probability": 0.9,
         "timestamp": datetime.datetime.now().isoformat(),
     }
-    publish_message(broker, port, random.choice(topics), message)
+    for i in range(3):
+        publish_message(broker, port, random.choice(topics), message)
+        time.sleep(1)

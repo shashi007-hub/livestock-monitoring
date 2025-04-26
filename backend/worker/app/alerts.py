@@ -1,9 +1,8 @@
 import os
 from twilio.rest import Client
-import asyncio
 from telegram import Bot
 
-from models import User
+from app.database.models import Bovine, User
 
 
 # Twilio configuration
@@ -25,7 +24,8 @@ def _get_user_number_from_db(bovine_id):
     from app.database.db import db_session
     try:
         db = db_session()
-        user = db.query(User).filter(User.bovine_id == bovine_id).first()
+        bovine = db.query(Bovine).filter(Bovine.id == bovine_id).first()
+        user = db.query(User).filter(User.id == bovine.owner_id).first()
         if user and user.phone_number:
             return user.phone_number
         else:

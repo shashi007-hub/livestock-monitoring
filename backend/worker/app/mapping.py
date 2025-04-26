@@ -1,6 +1,7 @@
 # PLEASE NOTE ALL THESE FUNCTIONS WILL BE RUNNING IN A PARALLEL PROCXESS 
 # HENCE ITS BETTER TO JUST IMPORT INSIDE FUNCTIONS AND **NOT HAVE GLOBAL SCOPE** TO MAKE SURE THERE ARE NO LOCK ISSUES
 
+
 def validate_batch(batch_data):
     """Validate that all messages in batch are from same bovine and have required fields"""
     if not batch_data.get('data'):
@@ -17,15 +18,16 @@ def microphone_pipeline(batch_data):
     from app.database.db import db_session
     from app.database.models import DistressCall
     from app.alerts import send_sms_alert
+
     
-    print(f"Processing microphone batch data: {len(batch_data['data'])} messages for bovine {batch_data['data'][0]['bovine_id']}")
+    print(f"Processing microphone batch data: {len(batch_data['data'])} messages for bovine {batch_data['data'][0]['bovine_id']}",flush=True)
     
     # Validate batch
     # This might not be a thing to do actually but i'll have to check
-    is_valid, error = validate_batch(batch_data)
-    if not is_valid:
-        print(f"Invalid batch: {error}")
-        return {"status": "error", "message": error}
+    # is_valid, error = validate_batch(batch_data)
+    # if not is_valid:
+    #     print(f"Invalid batch: {error}")
+    #     return {"status": "error", "message": error}
     
     db = db_session()
     try:
@@ -49,13 +51,15 @@ def microphone_pipeline(batch_data):
             probability=avg_probability
         )
         
+        print(avg_probability)
+        
         db.add(distress_call)
         db.commit()
-        print(f"Added aggregated distress call with probability {avg_probability:.3f}")
+        print(f"Added aggregated distress call with probability {avg_probability:.3f}",flush=True)
         
         # Post-inference action if probability is very high
         if avg_probability > 0.8:
-            print(f"High distress detected! Triggering alert for bovine {batch_data['data'][0]['bovine_id']}")
+            print(f"High distress detected! Triggering alert for bovine {batch_data['data'][0]['bovine_id']}",flush=True)
             send_sms_alert(f"High distress detected for bovine {batch_data['data'][0]['bovine_id']} with probability {avg_probability:.2f}",batch_data['data'][0]['bovine_id'])
         
         return {"status": "success", "avg_probability": avg_probability}
@@ -73,8 +77,3 @@ def accelerometer_pipeline(batch_data):
 def camera_pipeline(batch_data):
     pass
 
-topic_to_pipeline = {
-    "inference/microphone": microphone_pipeline,
-    "inference/accelerometer": accelerometer_pipeline,
-    "inference/camera": camera_pipeline,
-}
