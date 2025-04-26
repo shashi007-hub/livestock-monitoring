@@ -11,11 +11,13 @@ router = APIRouter()
 class LoginForm(BaseModel):
     username: str
     password: str
+    phone_number: Optional[str] = None
+    
 
 class SignupForm(BaseModel):
     username: str
     password: str
-    email: str
+    phone_number: Optional[str] = None
     
 class BovineCreate(BaseModel):
     name: str
@@ -26,6 +28,7 @@ class BovineCreate(BaseModel):
     location: Optional[str] = None
     father_id: Optional[int] = None
     mother_id: Optional[int] = None
+    image_base64: Optional[str] = None 
 
 
 class BovineBase(BaseModel):
@@ -61,14 +64,14 @@ def login(form: LoginForm, db: Session = Depends(get_db)):
 
 @router.post("/signup")
 def signup(form: SignupForm, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.username == form.username or User.email == form.email).first()
+    existing_user = db.query(User).filter(User.username == form.username or User.phone_number == form.phone_number).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Username/email already registered")
+        raise HTTPException(status_code=400, detail="Username/phonenumber already registered")
     
     hashed_password = get_password_hash(form.password)
     new_user = User(
         username=form.username,
-        email=form.email,
+        phone_number=form.phone_number,
         hashed_password=hashed_password
     )
     

@@ -1,12 +1,15 @@
 import os
 import json
-import uuid
 import time
+import uuid
+import random
+import paho.mqtt.client as mqtt
+
+# Fix imports to use package paths
+from app.mapping import topic_to_pipeline
 import threading
 import psutil
 from concurrent.futures import ProcessPoolExecutor
-import paho.mqtt.client as mqtt
-from mapping import topic_to_pipeline
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "mosquitto")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))

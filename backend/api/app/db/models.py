@@ -3,6 +3,8 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from db.database import Base
 import enum
+from sqlalchemy import Boolean,  Float, DateTime
+
 
 class BreedType(enum.Enum):
     GIR = "Gir"
@@ -20,7 +22,7 @@ class BreedType(enum.Enum):
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
+    phone_number = Column(String, unique=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
@@ -45,3 +47,27 @@ class Bovine(Base):
     # Relationships
     father = relationship("Bovine", remote_side=[id], backref="children_father", foreign_keys=[father_id])
     mother = relationship("Bovine", remote_side=[id], backref="children_mother", foreign_keys=[mother_id])
+
+class DistressCall(Base):
+    __tablename__ = 'distress_calls'
+    
+    id = Column(Integer, primary_key=True)
+    bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    probability = Column(Float, nullable=False)
+
+class LamenessInference(Base):
+    __tablename__ = 'lameness_inferences'
+    
+    id = Column(Integer, primary_key=True)
+    bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
+    metric = Column(Float, nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+
+class OestrousCall(Base):
+    __tablename__ = 'oestrous_calls'
+    
+    id = Column(Integer, primary_key=True)
+    bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
+    probability = Column(Float, nullable=False)
+    timestamp = Column(DateTime, nullable=False)

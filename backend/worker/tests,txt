@@ -1,0 +1,5 @@
+1)The message must aggregate for a given bovine id and only start inference if there are more than 5 records for the given cow
+
+2)The SMS must be sent if the aggregate is more than a given threshold 
+
+3)
