@@ -48,6 +48,7 @@ class Bovine(Base):
     # Relationships
     father = relationship("Bovine", remote_side=[id], backref="children_father", foreign_keys=[father_id])
     mother = relationship("Bovine", remote_side=[id], backref="children_mother", foreign_keys=[mother_id])
+    avg_steps = Column(Integer, nullable=True)  # Average steps per day
 
 class DistressCall(Base):
     __tablename__ = 'distress_calls'
@@ -94,4 +95,13 @@ class FeedingAnalytics(Base):
     average_feeding_time = Column(Float, nullable=False)  # Average time spent feeding in minutes
     meal_interval = Column(Integer, nullable=False)  # Interval between meals in hours
     feeding_rate = Column(Float, nullable=False)  # Rate of feeding in kg/hour
+
+
+class SMSAlerts(Base):
+    __tablename__ = 'sms_alerts'
     
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey(User.id), nullable=False)
+    bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    message = Column(String, nullable=False)  # The content of the SMS alert

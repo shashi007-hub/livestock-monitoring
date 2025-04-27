@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Respons
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
-from db.models import User, Bovine, BreedType
+from db.models import DistressCall, FeedingAnalytics, FeedingPatterns, LamenessInference, SMSAlerts, User, Bovine, BreedType
 from core.security import verify_password, create_access_token, get_password_hash
 from typing import Optional, List
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -192,3 +193,125 @@ def get_bovines_by_user(user_id: int, skip: int = 0, limit: int = 100, db: Sessi
     if not bovines:
         raise HTTPException(status_code=404, detail="No bovines found for this user")
     return bovines
+
+
+class HomeResponse(BaseModel):
+    anamalies : int
+    avg_steps: int
+    grazing_volume: int
+    bovines = List[BovineResponse]
+    status = List[dict]  # List of dictionaries with bovine_id and status
+    
+class HomeForm(BaseModel):
+    user_id: int
+
+
+@router.get("/home/{user_id}",response_model=HomeResponse)
+def get_home_data(user_id: int, db: Session = Depends(get_db)):
+    bovines = db.query(Bovine).filter(Bovine.owner_id == user_id).all()
+    if not bovines:
+        raise HTTPException(status_code=404, detail="No bovines found for this user")
+    
+    status_list  = []\
+        # When to show red - distress + red
+        # Any one -- orange
+        # None -- green
+    
+    for bovine in bovines:
+        current_time = datetime.utcnow()
+        ten_days_ago = current_time - timedelta(days=10)
+        distress_calls = db.query(DistressCall).filter(
+            (DistressCall.bovine_id == bovine.id) &
+            (DistressCall.timestamp >= ten_days_ago) &
+            (DistressCall.probability > 0.7)
+        ).all().count()
+       
+        lameness_inferences = db.query(LamenessInference).filter(
+            (LamenessInference.bovine_id == bovine.id) &
+            (LamenessInference.timestamp >= ten_days_ago) &
+            (LamenessInference.metric > 3)).all().count()
+        
+        status = "normal"
+        
+        if(distress_calls > 0 and lameness_inferences > 0):
+            status = "danger"
+        elif(distress_calls > 0 or lameness_inferences > 0):
+            status = "needsAttention"
+        else:
+            status = "normal"
+        
+        status_list.append({
+            "bovine_id": bovine.id,
+            "status": status
+        })
+    
+    # Dummy data for the sake of example
+    anamalies = 0
+    avg_steps = 0
+    grazing_volume = 2500
+    try:
+        anamalies = db.query(SMSAlerts).filter(SMSAlerts.user_id == user_id).count()
+        avg_steps = sum(bovine.avg_steps for bovine in bovines) / len(bovines) if bovines else 0
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error fetching data")
+    
+    
+    return HomeResponse(
+        anamalies=anamalies,
+        avg_steps=avg_steps,
+        grazing_volume=grazing_volume,
+        bovines=bovines,
+        status=status_list
+    )
+    
+    
+@router.get("/sms-alerts/{user_id}", response_model=List[SMSAlerts])
+def get_sms_alerts(user_id: int, db: Session = Depends(get_db)):
+    alerts = db.query(SMSAlerts).filter(SMSAlerts.user_id == user_id).all()
+    if not alerts:
+        raise HTTPException(status_code=404, detail="No SMS alerts found for this user")
+    return alerts
+
+@router.get("/bovines/problems/{bovine_id}", response_model=List[dict])
+def get_bovine_problems(bovine_id: int, db: Session = Depends(get_db)):
+        current_time = datetime.utcnow()
+        ten_days_ago = current_time - timedelta(days=10)
+        
+        distress_calls = db.query(DistressCall).filter(
+            (DistressCall.bovine_id == bovine_id) &
+            (DistressCall.timestamp >= ten_days_ago) &
+            (DistressCall.probability > 0.7)
+        ).all()
+        
+        lameness_inferences = db.query(LamenessInference).filter(
+            (LamenessInference.bovine_id == bovine_id) &
+            (LamenessInference.timestamp >= ten_days_ago) &
+            (LamenessInference.metric > 3)).all()
+        
+        problems = []
+        
+        if distress_calls:
+            problems.append({
+                "type": "Distress",
+                "timestamp": distress_calls[0].timestamp,
+                "probability": distress_calls[0].probability
+            })
+        
+        if lameness_inferences:
+            problems.append({
+                "type": "Lameness",
+                "timestamp": lameness_inferences[0].timestamp,
+                "metric": lameness_inferences[0].metric
+            })
+        
+        return problems
+
+@router.get("/bovines/feeding-times/{bovine_id}", response_model=List[dict])
+def get_bovine_feeding_times(bovine_id: int, db: Session = Depends(get_db)):
+    feeding_times = db.query(FeedingAnalytics).filter(FeedingAnalytics.bovine_id == bovine_id).where(
+        FeedingAnalytics.timestamp >= datetime.utcnow() - timedelta(days=5)
+    ).all()
+    if not feeding_times:
+        raise HTTPException(status_code=404, detail="No feeding times found for this bovine")
+    
+    return [{"date": feeding.date, "feeding_time": feeding.feeding_time} for feeding in feeding_times]
