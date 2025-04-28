@@ -6,6 +6,13 @@ import json
 import paho.mqtt.client as mqtt
 import time
 import random
+import wave
+
+def read_wav_as_raw(file_path):
+    """Read a .wav file and return its raw audio data."""
+    with wave.open(file_path, 'rb') as wav_file:
+        raw_data = wav_file.readframes(wav_file.getnframes())
+    return raw_data
 
 def publish_message(broker, port, topic, message):
     # Create an MQTT client instance
@@ -30,9 +37,12 @@ if __name__ == "__main__":
     port = 1883  # Replace with your MQTT port
     topics = ["inference/microphone"]  # Replace with your desired topic
     import random
+    wav_file_path = "C:/Users/Shreyas Desai/Documents/jaw-movements/segmented_audios/recording_01_bite_0.wav"  # Replace with the path to your .wav file
+
+    raw_audio_data = read_wav_as_raw(wav_file_path)
     message = {
         "bovine_id": "3",
-        "audio":[],
+        "audio_raw":list(raw_audio_data),
         "probability": 0.9,
         "timestamp": datetime.datetime.now().isoformat(),
     }
