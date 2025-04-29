@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
-from db.models import DistressCall, FeedingAnalytics, FeedingPatterns, LamenessInference, SMSAlerts, User, Bovine, BreedType
+from db.models import DistressCall, FeedingAnalytics, LamenessInference, SMSAlerts, User, Bovine, BreedType
 from core.security import verify_password, create_access_token, get_password_hash
 from typing import Optional, List
 from datetime import datetime, timedelta
@@ -61,7 +61,7 @@ def login(form: LoginForm, db: Session = Depends(get_db)):
     if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     token = create_access_token({"sub": user.username})
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer", "user_id": user.id,"username": user.username} 
 
 @router.post("/signup")
 def signup(form: SignupForm, db: Session = Depends(get_db)):
@@ -196,11 +196,11 @@ def get_bovines_by_user(user_id: int, skip: int = 0, limit: int = 100, db: Sessi
 
 
 class HomeResponse(BaseModel):
-    anamalies : int
+    anamalies: int
     avg_steps: int
     grazing_volume: int
-    bovines = List[BovineResponse]
-    status = List[dict]  # List of dictionaries with bovine_id and status
+    bovines: List[BovineResponse]
+    status: List[dict] 
     
 class HomeForm(BaseModel):
     user_id: int
@@ -212,24 +212,29 @@ def get_home_data(user_id: int, db: Session = Depends(get_db)):
     if not bovines:
         raise HTTPException(status_code=404, detail="No bovines found for this user")
     
-    status_list  = []\
+    status_list  = []
         # When to show red - distress + red
         # Any one -- orange
         # None -- green
     
     for bovine in bovines:
+        print(bovine.id)
         current_time = datetime.utcnow()
         ten_days_ago = current_time - timedelta(days=10)
         distress_calls = db.query(DistressCall).filter(
             (DistressCall.bovine_id == bovine.id) &
             (DistressCall.timestamp >= ten_days_ago) &
             (DistressCall.probability > 0.7)
-        ).all().count()
+        ).count()
+        
+        
        
         lameness_inferences = db.query(LamenessInference).filter(
             (LamenessInference.bovine_id == bovine.id) &
             (LamenessInference.timestamp >= ten_days_ago) &
-            (LamenessInference.metric > 3)).all().count()
+            (LamenessInference.metric > 3)).count()
+        
+        
         
         status = "normal"
         
@@ -245,14 +250,18 @@ def get_home_data(user_id: int, db: Session = Depends(get_db)):
             "status": status
         })
     
+    print("distress_calls",distress_calls)
+    print("lameness_inferences",lameness_inferences)
+    
     # Dummy data for the sake of example
     anamalies = 0
     avg_steps = 0
     grazing_volume = 2500
     try:
         anamalies = db.query(SMSAlerts).filter(SMSAlerts.user_id == user_id).count()
-        avg_steps = sum(bovine.avg_steps for bovine in bovines) / len(bovines) if bovines else 0
+        avg_steps = (sum(bovine.avg_steps for bovine in bovines) / len(bovines)) if len(bovines)>0 else 0
     except Exception as e:
+        print("Error fetching data:", e.with_traceback())
         raise HTTPException(status_code=500, detail="Error fetching data")
     
     
@@ -265,7 +274,7 @@ def get_home_data(user_id: int, db: Session = Depends(get_db)):
     )
     
     
-@router.get("/sms-alerts/{user_id}", response_model=List[SMSAlerts])
+@router.get("/sms-alerts/{user_id}")
 def get_sms_alerts(user_id: int, db: Session = Depends(get_db)):
     alerts = db.query(SMSAlerts).filter(SMSAlerts.user_id == user_id).all()
     if not alerts:
@@ -306,7 +315,7 @@ def get_bovine_problems(bovine_id: int, db: Session = Depends(get_db)):
         
         return problems
 
-@router.get("/bovines/feeding-times/{bovine_id}", response_model=List[dict])
+@router.get("/bovines/feeding-times/{bovine_id}")
 def get_bovine_feeding_times(bovine_id: int, db: Session = Depends(get_db)):
     feeding_times = db.query(FeedingAnalytics).filter(FeedingAnalytics.bovine_id == bovine_id).where(
         FeedingAnalytics.timestamp >= datetime.utcnow() - timedelta(days=5)
@@ -315,3 +324,8 @@ def get_bovine_feeding_times(bovine_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No feeding times found for this bovine")
     
     return [{"date": feeding.date, "feeding_time": feeding.feeding_time} for feeding in feeding_times]
+
+
+@router.get("/health")
+def health_check():
+    return {"status": "ok"}

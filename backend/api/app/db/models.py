@@ -48,7 +48,7 @@ class Bovine(Base):
     # Relationships
     father = relationship("Bovine", remote_side=[id], backref="children_father", foreign_keys=[father_id])
     mother = relationship("Bovine", remote_side=[id], backref="children_mother", foreign_keys=[mother_id])
-    avg_steps = Column(Integer, nullable=True)  # Average steps per day
+    avg_steps = Column(Integer, nullable=True,default=0)  # Average steps per day
 
 class DistressCall(Base):
     __tablename__ = 'distress_calls'
