@@ -1,0 +1,35 @@
+Can you write an add animal place which can add a bovine based on the appi structure in the cubit of the add animals
+make sure to include all aproriate states in the states file
+make sure to make the UI loook good and cohesive
+use the cubits well
+show toast notification with any events
+provide the following options to the user
+- Can you write an add animal place which can add a bovine based on the appi structure in the cubit of the add animals
+make sure to include all aproriate states in the states file
+make sure to make the UI loook good and cohesive
+use the cubits well
+show toast notification with any events
+provide the following options to the user
+-        name=bovine.name, required
+        age=bovine.age, required
+        weight=bovine.weight, required
+        breed=bovine.breed, required -- dropdown
+        father_id=bovine.father_id, optional
+        mother_id=bovine.mother_id, optional
+        image_data=image_data, required Image must be base64 encoded string
+        owner_id=bovine.owner_id -->this is user_id you can pull from the hive auth box 
+
+        There are the valid breed types for the api 
+    GIR = "Gir"
+    SAHIWAL = "Sahiwal"
+    THARPARKAR = "Tharparkar"
+    RATHI = "Rathi"
+    KANKREJ = "Kankrej"
+    RED_SINDHI = "Red Sindhi"
+    ONGOLE = "Ongole"
+    KANGAYAM = "Kangayam"
+    HALLIKAR = "Hallikar"
+    OTHER = "Other"
+
+- strictly follow the api format given in cubit.dart and make calls directly from the cubit itself 
+leave the comment at the last line of the cubit
