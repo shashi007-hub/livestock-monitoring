@@ -20,11 +20,11 @@ MQTT_TOPIC_CAMERA = os.getenv("MQTT_TOPIC_CAMERA", "inference/camera")
 IS_DISTRIBUTED = False  # Set to True for distributed mode, False for local mode
 
 # Define threshold for batch processing
-# BATCH_THRESHOLD = 5  # Process messages when queue reaches this size for a specific bovine
+BATCH_THRESHOLD = 3  # Process messages when queue reaches this size for a specific bovine
 BATCH_TIMEOUT = 200  # Seconds to wait before processing incomplete batch
 
 BATCH_THRESHOLDS = {
-    "inference/microphone": 30,
+    "inference/microphone": 3,
     "inference/accelerometer": 1800,
     "inference/camera": 10
 }
