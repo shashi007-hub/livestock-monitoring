@@ -11,56 +11,56 @@ import wave
 import onnxruntime as ort
 from datetime import datetime, timedelta
 from app.database.db import db_session
-from app.database.models import DistressCall
+from app.database.models import DistressCall, FeedingPatterns, FeedingAnalytics, SMSAlerts
 from app.alerts import send_sms_alert
 
-# class Predictions(Enum):
-#     HFC = "HFC"
-#     LFC = "LFC"
+class Predictions(Enum):
+    HFC = "HFC"
+    LFC = "LFC"
 
-# class fcClassifier(object):
-#     Model = load_model(rf"src\ML_workspace\models\model.h5")
-#     def __init__(self, FileID: str) -> None:
-#         self.File = FileID
-#         self.PATH = rf"./FILES/audio/{self.File}"
+class fcClassifier(object):
+    Model = load_model(rf"app/models/cow_model.h5")
+    def __init__(self, FileID: str) -> None:
+        self.File = FileID
+        self.PATH = rf"./FILES/audio/{self.File}"
 
-#     def Predict(self):
-#         try:
-#             frequecy = fcClassifier.predict(self.PATH)
-#             return {
-#                 "predictions": frequecy
-#             }
-#         except Exception as e:
-#             print('Exception', str(e))
-#             return {"error" : e}
+    def Predict(self):
+        try:
+            frequecy = fcClassifier.predict(self.PATH)
+            return {
+                "predictions": frequecy
+            }
+        except Exception as e:
+            print('Exception', str(e))
+            return {"error" : e}
 
     
-#     def scale_melspec(mel_spec):
-#         target_size = (90, 200)  # Target size for mel spectrograms
-#         # Scale mel spectrogram using PIL
-#         scaled_mel_spec = librosa.util.normalize(mel_spec)  # Normalize mel spectrogram
-#         scaled_mel_spec = (scaled_mel_spec * 255).astype(np.uint8)  # Convert to uint8
-#         scaled_mel_spec = Image.fromarray(scaled_mel_spec)  # Convert to PIL image
-#         scaled_mel_spec = scaled_mel_spec.resize(target_size, Image.Resampling.LANCZOS)  # Resize
-#         scaled_mel_spec = np.array(scaled_mel_spec)
-#         print(scaled_mel_spec.shape)
+    def scale_melspec(mel_spec):
+        target_size = (90, 200)  # Target size for mel spectrograms
+        # Scale mel spectrogram using PIL
+        scaled_mel_spec = librosa.util.normalize(mel_spec)  # Normalize mel spectrogram
+        scaled_mel_spec = (scaled_mel_spec * 255).astype(np.uint8)  # Convert to uint8
+        scaled_mel_spec = Image.fromarray(scaled_mel_spec)  # Convert to PIL image
+        scaled_mel_spec = scaled_mel_spec.resize(target_size, Image.Resampling.LANCZOS)  # Resize
+        scaled_mel_spec = np.array(scaled_mel_spec)
+        print(scaled_mel_spec.shape)
 
-#         return scaled_mel_spec
+        return scaled_mel_spec
     
-#     def predict(WAV):
-#         scale,sr=librosa.load(WAV)
-#         mel_spec=librosa.feature.melspectrogram(y=scale,sr=sr,n_fft=2048,hop_length=512,n_mels=90)
-#         mel_spec=fcClassifier.scale_melspec(mel_spec)
-#         #print(mel_spec.shape)
-#         log_mel_spectrogram=librosa.power_to_db(mel_spec)
-#         log_mel_spectrogram=np.repeat(log_mel_spectrogram[...,np.newaxis],3,axis=-1)
-#         log_mel_spectrogram = np.expand_dims(log_mel_spectrogram, axis=0)
-#         #print(log_mel_spectrogram.shape)
+    def predict(WAV):
+        scale,sr=librosa.load(WAV)
+        mel_spec=librosa.feature.melspectrogram(y=scale,sr=sr,n_fft=2048,hop_length=512,n_mels=90)
+        mel_spec=fcClassifier.scale_melspec(mel_spec)
+        #print(mel_spec.shape)
+        log_mel_spectrogram=librosa.power_to_db(mel_spec)
+        log_mel_spectrogram=np.repeat(log_mel_spectrogram[...,np.newaxis],3,axis=-1)
+        log_mel_spectrogram = np.expand_dims(log_mel_spectrogram, axis=0)
+        #print(log_mel_spectrogram.shape)
 
-#         prediction=(fcClassifier.Model.predict(log_mel_spectrogram))
-#         if prediction[0]>0.5:
-#             return Predictions.HFC
-#         return Predictions.LFC
+        prediction=(fcClassifier.Model.predict(log_mel_spectrogram))
+        if prediction[0]>0.5:
+            return Predictions.HFC, prediction[0]
+        return Predictions.LFC, prediction[0]
 
 def validate_batch(batch_data):
     """Validate that all messages in batch are from same bovine and have required fields"""
@@ -124,8 +124,6 @@ def microphone_pipeline(batch_data):
     print(f"Processing microphone batch data: {len(batch_data['data'])} messages for bovine {batch_data['data'][0]['bovine_id']}", flush=True)
     db = db_session()
 
-    # frequency_classes = []
-
     try:
         predictions = []
         # print("*****", batch_data['data'])
@@ -151,35 +149,39 @@ def microphone_pipeline(batch_data):
             print(f"Predicted label for {bovine_id} at {timestamp}: {label}", flush=True)
 
             # Inference with Keras model (HFC / LFC)
-            # frequency_class = fcClassifier.predict(temp_wav_path)
+            frequency_class, probability = fcClassifier.predict(temp_wav_path)
 
-            # if frequency_class == Predictions.HFC:
-            #     distress_call = DistressCall(
-            #         bovine_id=bovine_id,
-            #         timestamp=datetime.utcnow(),
-            #         probability=""  # You can decide what value to store
-            #     )
-            #     send_sms_alert("DISTRESS CALL",bovine_id)
+            if frequency_class == Predictions.HFC:
+                distress_call = DistressCall(
+                    bovine_id=bovine_id,
+                    timestamp=timestamp,
+                    probability=probability  # You can decide what value to store
+                )
+                send_sms_alert("DISTRESS CALL", bovine_id)
             
-            # db.add(distress_call)
+            db.add(distress_call)
+
+            sms_alert = SMSAlerts(
+                user_id=message['user_id'],
+                bovine_id=bovine_id,
+                timestamp=timestamp,
+                message="DISTRESS CALL"
+            )
+
+            db.add(distress_call)
 
             # Cleanup
             os.remove(temp_wav_path)
             print("Removed temporary wav file:", temp_wav_path, flush=True)
 
-        # Save the result into DistressCall (or another model)
-        # avg_feeding_rate = np.mean(metrics["Feeding Rates (FR)"]) if metrics["Feeding Rates (FR)"] else 0
+            feeding_pattern = FeedingPatterns(
+                bovine_id=bovine_id,
+                timestamp=timestamp,
+                bite_chew=label_idx
+            )
+            db.add(feeding_pattern)
 
-        # distress_call = DistressCall(
-        #     bovine_id=bovine_id,
-        #     timestamp=datetime.utcnow(),
-        #     probability=avg_feeding_rate  # You can decide what value to store
-        # )
-
-        # db.add(distress_call)
-        # db.commit()
-
-        # print(f"Saved distress call for bovine {bovine_id} with average feeding rate {avg_feeding_rate:.3f}", flush=True)
+        db.commit()
 
         return {"status": "success", "predictions": predictions}
 
