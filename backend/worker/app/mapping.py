@@ -264,5 +264,22 @@ def accelerometer_pipeline(batch_data):
     pass
 
 def camera_pipeline(batch_data):
-    pass
+    from app.process_images.crop_detect import detect_cows,batch_detect_diseases
+    
+    print("camera piepline triggered")
+    for messages in batch_data['data']:
+        # Process each message in the batch
+        bovine_id = messages['bovine_id']
+        timestamp = datetime.strptime(messages['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
+        print(f"Processing camera message  at {timestamp}", flush=True)
+        detected_cows = detect_cows(messages['image_raw'])
+
+        if len(detected_cows) > 0:
+
+            diseases = batch_detect_diseases(detected_cows)
+            if len(diseases) > 0:
+               print(diseases)
+
+
+    return "camera piepline triggered"
 

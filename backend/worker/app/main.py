@@ -26,7 +26,7 @@ BATCH_TIMEOUT = 200  # Seconds to wait before processing incomplete batch
 BATCH_THRESHOLDS = {
     "inference/microphone": 3,
     "inference/accelerometer": 1800,
-    "inference/camera": 10
+    "inference/camera": 1
 }
 
 WORKER_ID = str(uuid.uuid4())
@@ -97,6 +97,7 @@ def   run_inference_and_publish(messages):
     }
         
         # Process the batch through the pipeline
+   
     print(f"[{WORKER_ID}] Processing batch of {len(messages)} messages for bovine {bovine_id} on topic {topic}")
     
     if(topic == "inference/microphone"):
@@ -105,6 +106,7 @@ def   run_inference_and_publish(messages):
         result = accelerometer_pipeline(batch_message)
     elif(topic == "inference/camera"):
         result = camera_pipeline(batch_message)
+        print(result)
         print(f"[{WORKER_ID}] Processed batch of {len(messages)} messages for bovine {bovine_id} on topic {topic}")
     
     return result

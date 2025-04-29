@@ -12,3 +12,4 @@ librosa
 keras
 pillow
 tensorflow
+easyocr
