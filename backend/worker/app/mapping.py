@@ -18,49 +18,43 @@ class Predictions(Enum):
     HFC = "HFC"
     LFC = "LFC"
 
-class fcClassifier(object):
-    Model = load_model(rf"app/models/cow_model.h5")
-    def __init__(self, FileID: str) -> None:
-        self.File = FileID
-        self.PATH = rf"./FILES/audio/{self.File}"
-
-    def Predict(self):
-        try:
-            frequecy = fcClassifier.predict(self.PATH)
-            return {
-                "predictions": frequecy
-            }
-        except Exception as e:
-            print('Exception', str(e))
-            return {"error" : e}
+def scale_melspec(mel_spec):
+    target_size = (90, 200)
+    norm_spec = librosa.util.normalize(mel_spec)
+    norm_spec = (norm_spec * 255).astype(np.uint8)
+    img = Image.fromarray(norm_spec)
+    img = img.resize(target_size, Image.Resampling.LANCZOS)
+    img_array = np.array(img)
+    return img_array
 
     
-    def scale_melspec(mel_spec):
-        target_size = (90, 200)  # Target size for mel spectrograms
-        # Scale mel spectrogram using PIL
-        scaled_mel_spec = librosa.util.normalize(mel_spec)  # Normalize mel spectrogram
-        scaled_mel_spec = (scaled_mel_spec * 255).astype(np.uint8)  # Convert to uint8
-        scaled_mel_spec = Image.fromarray(scaled_mel_spec)  # Convert to PIL image
-        scaled_mel_spec = scaled_mel_spec.resize(target_size, Image.Resampling.LANCZOS)  # Resize
-        scaled_mel_spec = np.array(scaled_mel_spec)
-        print(scaled_mel_spec.shape)
+def predict_from_wav(Model,WAV):
+    y, sr = librosa.load(WAV)
+    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=90)
+    log_mel_spec = librosa.power_to_db(mel_spec)
+    scaled_mel_spec = scale_melspec(log_mel_spec)
 
-        return scaled_mel_spec
-    
-    def predict(WAV):
-        scale,sr=librosa.load(WAV)
-        mel_spec=librosa.feature.melspectrogram(y=scale,sr=sr,n_fft=2048,hop_length=512,n_mels=90)
-        mel_spec=fcClassifier.scale_melspec(mel_spec)
-        #print(mel_spec.shape)
-        log_mel_spectrogram=librosa.power_to_db(mel_spec)
-        log_mel_spectrogram=np.repeat(log_mel_spectrogram[...,np.newaxis],3,axis=-1)
-        log_mel_spectrogram = np.expand_dims(log_mel_spectrogram, axis=0)
-        #print(log_mel_spectrogram.shape)
+        # Shape it to model input: (1, H, W, 3)
+    input_tensor = np.repeat(scaled_mel_spec[..., np.newaxis], 3, axis=-1)
+    input_tensor = np.expand_dims(input_tensor, axis=0)
 
-        prediction=(fcClassifier.Model.predict(log_mel_spectrogram))
-        if prediction[0]>0.5:
-            return Predictions.HFC, prediction[0]
-        return Predictions.LFC, prediction[0]
+    print("Input tensor generated")
+
+    print("Input shape:", input_tensor.shape)
+    print("Model input shape:", Model.input_shape)
+
+    prediction = Model.predict(input_tensor, verbose=1)
+
+    print("Prediction made")
+
+    pred_class = np.argmax(prediction)
+    confidence = float(np.max(prediction))
+
+    if pred_class == 1:
+        return Predictions.HFC, confidence
+    elif pred_class == 0:
+        return Predictions.LFC, confidence
+
 
 def validate_batch(batch_data):
     """Validate that all messages in batch are from same bovine and have required fields"""
@@ -146,12 +140,13 @@ def microphone_pipeline(batch_data):
             label = LABELS[label_idx]
 
             predictions.append((timestamp, label))
-            print(f"Predicted label for {bovine_id} at {timestamp}: {label}", flush=True)
+            print(f"Predicted label for Bovine {bovine_id} at {timestamp}: {label}", flush=True)
 
             # Inference with Keras model (HFC / LFC)
-            frequency_class, probability = fcClassifier.predict(temp_wav_path)
+            distress_model = load_model("app/models/cow_model.h5", compile=True)
+            frequency_class, probability = predict_from_wav(distress_model,temp_wav_path)
 
-            if frequency_class == Predictions.HFC:
+            if frequency_class == Predictions.HFC or frequency_class == Predictions.LFC:
                 distress_call = DistressCall(
                     bovine_id=bovine_id,
                     timestamp=timestamp,
@@ -162,7 +157,7 @@ def microphone_pipeline(batch_data):
             db.add(distress_call)
 
             sms_alert = SMSAlerts(
-                user_id=message['user_id'],
+                user_id=1,
                 bovine_id=bovine_id,
                 timestamp=timestamp,
                 message="DISTRESS CALL"
@@ -187,7 +182,7 @@ def microphone_pipeline(batch_data):
 
     except Exception as e:
         db.rollback()
-        print(f"Error processing microphone batch: {e}")
+        print(f"Error processing microphone batch: {e.with_traceback()}", flush=True)
         return {"status": "error", "message": str(e)}
     finally:
         db.close()

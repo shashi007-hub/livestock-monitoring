@@ -1,6 +1,5 @@
 import os
 from twilio.rest import Client
-from telegram import Bot
 
 from app.database.models import Bovine, User
 
