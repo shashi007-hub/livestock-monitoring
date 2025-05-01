@@ -6,6 +6,7 @@ from app.database.models import Bovine, User
 
 # Twilio configuration
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_FROM_NUMBER = os.getenv('TWILIO_FROM_NUMBER')
 ALERT_TO_NUMBER = os.getenv('ALERT_TO_NUMBER')
@@ -32,6 +33,32 @@ def _get_user_number_from_db(bovine_id):
             return None
     except Exception as e:
         print(f"Error retrieving user number from DB: {e}")
+        return None
+    finally:
+        db.close()
+
+def _get_bovin_name_from_db(bovine_id):
+    """
+    Retrieve the user's phone number from the database based on bovine ID.
+    
+    Args:
+        bovine_id (int): The ID of the bovine
+    
+    Returns:
+        str: The user's phone number
+    """
+    from app.database.db import db_session
+    try:
+        db = db_session()
+        bovine = db.query(Bovine).filter(Bovine.id == bovine_id).first()
+        user = db.query(User).filter(User.id == bovine.owner_id).first()
+        if bovine and bovine.name:
+            return bovine.name
+        else:
+            print(f"No name found for bovine ID {bovine_id}")
+            return None
+    except Exception as e:
+        print(f"Error retrieving bovine from DB: {e}")
         return None
     finally:
         db.close()
