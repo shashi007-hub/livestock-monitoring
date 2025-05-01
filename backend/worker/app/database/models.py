@@ -52,7 +52,7 @@ class Bovine(Base):
     father = relationship("Bovine", remote_side=[id], backref="children_father", foreign_keys=[father_id])
     mother = relationship("Bovine", remote_side=[id], backref="children_mother", foreign_keys=[mother_id])
     avg_steps = Column(Integer, nullable=True)  # Average steps per day
-
+    
 class DistressCall(Base):
     __tablename__ = 'distress_calls'
     
@@ -108,3 +108,12 @@ class SMSAlerts(Base):
     bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
     timestamp = Column(DateTime, nullable=False)
     message = Column(String, nullable=False)  # The content of the SMS alert
+
+class SkinDiseases(Base):
+    __tablename__ = 'skin_diseases'
+    
+    id = Column(Integer, primary_key=True)
+
+    bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    disease   = Column(String, nullable=False)   

@@ -20,12 +20,12 @@ MQTT_TOPIC_CAMERA = os.getenv("MQTT_TOPIC_CAMERA", "inference/camera")
 IS_DISTRIBUTED = False  # Set to True for distributed mode, False for local mode
 
 # Define threshold for batch processing
-BATCH_THRESHOLD = 3  # Process messages when queue reaches this size for a specific bovine
+# BATCH_THRESHOLD = 3  # Process messages when queue reaches this size for a specific bovine
 BATCH_TIMEOUT = 200  # Seconds to wait before processing incomplete batch
 
 BATCH_THRESHOLDS = {
     "inference/microphone": 3,
-    "inference/accelerometer": 1800,
+    "inference/accelerometer": 20,
     "inference/camera": 1
 }
 
@@ -181,7 +181,7 @@ def main():
                         
                         should_process = (
                             not q.empty() and 
-                            (q.qsize() >= BATCH_THRESHOLD or 
+                            (q.qsize() >= BATCH_THRESHOLDS[topic] or 
                             curr_time - last_process_time >= BATCH_TIMEOUT)
                         )
                         
@@ -190,7 +190,7 @@ def main():
                             print(f"[{WORKER_ID}] Queue size: {q.qsize()}, Time since last process: {curr_time - last_process_time:.2f}s")
                             messages = [] # (particular sensor for a particular cow)
                             try:
-                                while len(messages) < BATCH_THRESHOLD and not q.empty():
+                                while len(messages) < BATCH_THRESHOLDS[topic] and not q.empty():
                                     message = q.get_nowait()
                                     messages.append(message)
                                     q.task_done()
