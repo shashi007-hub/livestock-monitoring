@@ -93,11 +93,11 @@ class FeedingAnalytics(Base):
     id = Column(Integer, primary_key=True)
     bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
     date = Column(DateTime, nullable=False)
-    feeding_time = Column(DateTime, nullable=False)  # Time when the bovine was fed
-    feeding_frequency = Column(Integer, nullable=False)  # Frequency of feeding in hours
-    average_feeding_time = Column(Float, nullable=False)  # Average time spent feeding in minutes
-    meal_interval = Column(Integer, nullable=False)  # Interval between meals in hours
-    feeding_rate = Column(Float, nullable=False)  # Rate of feeding in kg/hour
+    feeding_time = Column(DateTime, nullable=False)
+    feeding_frequency = Column(Integer, nullable=False)
+    average_feeding_time = Column(Float, nullable=False)
+    meal_interval = Column(Integer, nullable=False)
+    feeding_rate = Column(Float, nullable=False)
 
 
 class SMSAlerts(Base):

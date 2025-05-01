@@ -146,24 +146,24 @@ def microphone_pipeline(batch_data):
             distress_model = load_model("app/models/cow_model.h5", compile=True)
             frequency_class, probability = predict_from_wav(distress_model,temp_wav_path)
 
-            if frequency_class == Predictions.HFC or frequency_class == Predictions.LFC:
+            if frequency_class == Predictions.HFC: # or frequency_class == Predictions.LFC:
                 distress_call = DistressCall(
                     bovine_id=bovine_id,
                     timestamp=timestamp,
                     probability=probability  # You can decide what value to store
                 )
-                send_sms_alert("DISTRESS CALL", bovine_id)
+                send_sms_alert(f"ALERT! DISTRESS CALL from Bovine {bovine_id}!", bovine_id)
             
-            db.add(distress_call)
+                db.add(distress_call)
 
-            sms_alert = SMSAlerts(
-                user_id=1,
-                bovine_id=bovine_id,
-                timestamp=timestamp,
-                message="DISTRESS CALL"
-            )
+                sms_alert = SMSAlerts(
+                    user_id=1,
+                    bovine_id=bovine_id,
+                    timestamp=timestamp,
+                    message=f"ALERT! DISTRESS CALL from Bovine {bovine_id}!"
+                )
 
-            db.add(distress_call)
+                db.add(sms_alert)
 
             # Cleanup
             os.remove(temp_wav_path)
@@ -186,79 +186,6 @@ def microphone_pipeline(batch_data):
         return {"status": "error", "message": str(e)}
     finally:
         db.close()
-
-def parse_predictions(predictions):
-    SILENCE_THRESHOLD_SECONDS = 300  # 5 minutes
-    # predictions = list of (timestamp, label)
-    sessions = []
-    current_session = []
-    last_time = None
-
-    for timestamp, label in predictions:
-        if label in ['chew', 'bite', 'chew-bite']:
-            if last_time and (timestamp - last_time).total_seconds() > SILENCE_THRESHOLD_SECONDS:
-                if current_session:
-                    sessions.append(current_session)
-                current_session = []
-            current_session.append((timestamp, label))
-            last_time = timestamp
-
-    if current_session:
-        sessions.append(current_session)
-    return sessions
-
-def calculate_metrics(predictions):
-    sessions = parse_predictions(predictions)
-    total_feeding_time = timedelta()
-    feeding_frequencies = len(sessions)
-    meal_durations = []
-    feeding_rates = []
-    total_chews_bites = len(predictions)
-
-    for session in sessions:
-        start = session[0][0]
-        end = session[-1][0]
-        duration = end - start
-        duration_minutes = duration.total_seconds() / 60.0
-        meal_durations.append(duration_minutes)
-        total_feeding_time += duration
-
-        num_chews = len(session)
-        if duration_minutes > 0:
-            feeding_rates.append(num_chews / duration_minutes)
-        else:
-            feeding_rates.append(0)
-
-    # Metrics
-    FT = total_feeding_time.total_seconds() / 60.0
-    FF = feeding_frequencies
-    MD = meal_durations
-    AFT = FT / FF if FF > 0 else 0
-    IMI = []
-    for i in range(len(sessions) - 1):
-        gap = (sessions[i+1][0][0] - sessions[i][-1][0])
-        IMI.append(gap.total_seconds() / 3600.0)  # hours
-    FR = feeding_rates
-    TCPD = total_chews_bites
-
-    return {
-        "Feeding Time (FT)": FT,
-        "Feeding Frequency (FF)": FF,
-        "Meal Durations (MD)": MD,
-        "Average Feeding Time (AFT)": AFT,
-        "Inter-Meal Intervals (IMI)": IMI,
-        "Feeding Rates (FR)": FR,
-        "Total Chews/Bites Per Day": TCPD,
-    }
-
-def metrics_for_cron_job(predictions):
-    metrics = calculate_metrics(predictions)
-    print("Calculated Metrics:", metrics, flush=True)
-    return {
-        "Date": datetime.utcnow(),
-        "Bovine ID": predictions[0][0].bovine_id,
-        "Metrics":metrics
-        }
 
 def accelerometer_pipeline(batch_data):
     pass

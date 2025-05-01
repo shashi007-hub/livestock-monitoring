@@ -1,103 +1,173 @@
-import datetime
-from sqlalchemy import and_
-from app.database.db import db_session
-from app.database.models import FeedingAnalytics
+from datetime import datetime, timedelta
+from sqlalchemy import func
+from app.db import db_session
+from app.db.models import (
+    Bovine, FeedingPatterns, FeedingAnalytics, SMSAlerts
+)
 from app.alerts import send_sms_alert
-import numpy as np
 
-def detect_anomalies(bovine_id, metrics_10_days):
-    anomalies = []
-    disease_map = {
-        "Feeding Time (FT)": ("decrease", ["BRD", "metritis", "ketosis"]),
-        "Feeding Frequency (FF)": ("decrease", ["BRD", "lameness", "stress"]),
-        "Meal Durations (MD)": ("decrease", ["BRD", "fever", "pain"]),
-        "Average Feeding Time (AFT)": ("decrease", ["BRD", "systemic inflammation"]),
-        "Inter-Meal Intervals (IMI)": ("increase", ["BRD", "fatigue", "discomfort"]),
-        "Feeding Rates (FR)": ("decrease", ["Oral pain", "illness"]),
-        "Total Chews/Bites Per Day": ("decrease", ["BRD", "systemic illness"])
+def parse_predictions(predictions):
+    SILENCE_THRESHOLD_SECONDS = 300  # 5 minutes
+    # predictions = list of (timestamp, label)
+    sessions = []
+    current_session = []
+    last_time = None
+
+    for timestamp, label in predictions:
+        if label in ['chew', 'bite', 'chew-bite']:
+            if last_time and (timestamp - last_time).total_seconds() > SILENCE_THRESHOLD_SECONDS:
+                if current_session:
+                    sessions.append(current_session)
+                current_session = []
+            current_session.append((timestamp, label))
+            last_time = timestamp
+
+    if current_session:
+        sessions.append(current_session)
+    return sessions
+
+def calculate_metrics(predictions):
+    sessions = parse_predictions(predictions)
+    total_feeding_time = timedelta()
+    feeding_frequencies = len(sessions)
+    meal_durations = []
+    feeding_rates = []
+    total_chews_bites = len(predictions)
+
+    for session in sessions:
+        start = session[0][0]
+        end = session[-1][0]
+        duration = end - start
+        duration_minutes = duration.total_seconds() / 60.0
+        meal_durations.append(duration_minutes)
+        total_feeding_time += duration
+
+        num_chews = len(session)
+        if duration_minutes > 0:
+            feeding_rates.append(num_chews / duration_minutes)
+        else:
+            feeding_rates.append(0)
+
+    # Metrics
+    FT = total_feeding_time.total_seconds() / 60.0
+    FF = feeding_frequencies
+    MD = meal_durations
+    AFT = FT / FF if FF > 0 else 0
+    IMI = []
+    for i in range(len(sessions) - 1):
+        gap = (sessions[i+1][0][0] - sessions[i][-1][0])
+        IMI.append(gap.total_seconds() / 3600.0)  # hours
+    FR = feeding_rates
+    TCPD = total_chews_bites
+
+    return {
+        "Feeding Time (FT)": FT,
+        "Feeding Frequency (FF)": FF,
+        "Meal Durations (MD)": MD,
+        "Average Feeding Time (AFT)": AFT,
+        "Inter-Meal Intervals (IMI)": IMI,
+        "Feeding Rates (FR)": FR,
+        "Total Chews/Bites Per Day": TCPD,
     }
 
-    threshold = {
-        "Feeding Time (FT)": 0.2,
-        "Feeding Frequency (FF)": 0.2,
-        "Meal Durations (MD)": 0.25,
-        "Average Feeding Time (AFT)": 0.2,
-        "Inter-Meal Intervals (IMI)": 0.3,
-        "Feeding Rates (FR)": 0.25,
-        "Total Chews/Bites Per Day": 0.25
-    }
-
-    # Separate baseline and recent days
-    baseline_days = metrics_10_days[:7]
-    recent_days = metrics_10_days[7:]
-
-    for metric_name in threshold:
-        try:
-            baseline_vals = [day.metrics[metric_name] for day in baseline_days if metric_name in day.metrics]
-            recent_vals = [day.metrics[metric_name] for day in recent_days if metric_name in day.metrics]
-            if len(baseline_vals) < 3 or len(recent_vals) < 1:
-                continue  # Not enough data
-            baseline_avg = np.mean(baseline_vals)
-            recent_avg = np.mean(recent_vals)
-        except Exception:
-            continue
-
-        if baseline_avg == 0:
-            continue  # Avoid divide-by-zero
-
-        change = (recent_avg - baseline_avg) / baseline_avg
-        direction, diseases = disease_map[metric_name]
-
-        if direction == "decrease" and change < -threshold[metric_name]:
-            anomalies.append({
-                "metric": metric_name,
-                "change": f"{change * 100:.1f}%",
-                "diseases": diseases
-            })
-        elif direction == "increase" and change > threshold[metric_name]:
-            anomalies.append({
-                "metric": metric_name,
-                "change": f"{change * 100:.1f}%",
-                "diseases": diseases
-            })
-
-    return anomalies
+def average(lst):
+    return sum(lst) / len(lst) if lst else 0
 
 def my_cron_job():
     print("Cron job executed", flush=True)
     db = db_session()
     try:
-        today = datetime.date.today()
-        start_date = today - datetime.timedelta(days=10)
+        today = datetime.utcnow().date()
+        ten_days_ago = today - timedelta(days=10)
 
-        # Get distinct bovine IDs
-        bovine_ids = db.query(FeedingAnalytics.bovine_id).distinct().all()
-        bovine_ids = [b[0] for b in bovine_ids]
+        bovines = db.query(Bovine).all()
 
-        for bovine_id in bovine_ids:
-            records = db.query(FeedingAnalytics).filter(
-                and_(
+        for bovine in bovines:
+            bovine_id = bovine.id
+            owner_id = bovine.owner_id
+
+            # Get last 10 days of analytics (excluding today)
+            past_analytics = db.query(FeedingAnalytics)\
+                .filter(
                     FeedingAnalytics.bovine_id == bovine_id,
-                    FeedingAnalytics.date >= start_date,
-                    FeedingAnalytics.date <= today
-                )
-            ).order_by(FeedingAnalytics.date.asc()).all()
+                    FeedingAnalytics.date >= ten_days_ago,
+                    FeedingAnalytics.date < today
+                ).all()
 
-            if len(records) < 10:
-                print(f"Skipping bovine {bovine_id} due to insufficient data", flush=True)
+            if len(past_analytics) < 5:
+                continue  # Not enough history for comparison
+
+            # Get today's feeding patterns
+            today_patterns = db.query(FeedingPatterns)\
+                .filter(
+                    FeedingPatterns.bovine_id == bovine_id,
+                    func.date(FeedingPatterns.timestamp) == today
+                ).all()
+
+            if not today_patterns:
                 continue
 
-            anomalies = detect_anomalies(bovine_id, records)
+            label_map = {0: "chew", 1: "bite", 2: "chew-bite"}
+            today_data = [(p.timestamp, label_map[p.bite_chew]) for p in today_patterns]
+            today_metrics = calculate_metrics(today_data)
+
+            # Extract today's scalar values
+            today_vals = {
+                "FT": today_metrics["Feeding Time (FT)"],
+                "FF": today_metrics["Feeding Frequency (FF)"],
+                "AFT": today_metrics["Average Feeding Time (AFT)"],
+                "IMI": average(today_metrics["Inter-Meal Intervals (IMI)"]),
+                "FR": average(today_metrics["Feeding Rates (FR)"]),
+            }
+
+            # Historical averages
+            past_vals = {
+                "FT": average([a.feeding_time.timestamp() / 60 for a in past_analytics]),
+                "FF": average([a.feeding_frequency for a in past_analytics]),
+                "AFT": average([a.average_feeding_time for a in past_analytics]),
+                "IMI": average([a.meal_interval for a in past_analytics]),
+                "FR": average([a.feeding_rate for a in past_analytics]),
+            }
+
+            def is_anomaly(metric, direction="decrease", threshold=0.3):
+                t_val = today_vals[metric]
+                p_val = past_vals[metric]
+                if p_val == 0:
+                    return False
+                if direction == "decrease" and t_val < (1 - threshold) * p_val:
+                    return True
+                if direction == "increase" and t_val > (1 + threshold) * p_val:
+                    return True
+                return False
+
+            anomalies = []
+            if is_anomaly("FT", "decrease"):
+                anomalies.append("Feeding Time ↓")
+            if is_anomaly("FF", "decrease"):
+                anomalies.append("Feeding Frequency ↓")
+            if is_anomaly("AFT", "decrease"):
+                anomalies.append("Avg. Feeding Time ↓")
+            if is_anomaly("IMI", "increase"):
+                anomalies.append("Meal Interval ↑")
+            if is_anomaly("FR", "decrease"):
+                anomalies.append("Feeding Rate ↓")
+
             if anomalies:
-                msg = f"Anomalies detected for Bovine {bovine_id}:\n"
-                for a in anomalies:
-                    msg += f"- {a['metric']} changed by {a['change']} → possible: {', '.join(a['diseases'])}\n"
-                send_sms_alert(msg, bovine_id)
-                print(f"Alert sent for Bovine {bovine_id}", flush=True)
-            else:
-                print(f"No anomalies for Bovine {bovine_id}", flush=True)
+                message = f"ALERT! Bovine {bovine_id} feeding anomaly: " + ", ".join(anomalies)
+                print(message, flush=True)
+
+                send_sms_alert(message, bovine_id)
+                db.add(SMSAlerts(
+                    user_id=owner_id,
+                    bovine_id=bovine_id,
+                    timestamp=datetime.utcnow(),
+                    message=message
+                ))
+
+        db.commit()
 
     except Exception as e:
-        print(f"Error during cron job: {e}", flush=True)
+        db.rollback()
+        print(f"Error in cron job: {e}", flush=True)
     finally:
         db.close()
