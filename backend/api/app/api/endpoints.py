@@ -329,3 +329,117 @@ def get_bovine_feeding_times(bovine_id: int, db: Session = Depends(get_db)):
 @router.get("/health")
 def health_check():
     return {"status": "ok"}
+
+@router.get("/bovines/{bovine_id}/details")
+def get_bovine_details(bovine_id: int, db: Session = Depends(get_db)):
+    bovine = db.query(Bovine).filter(Bovine.id == bovine_id).first()
+    if not bovine:
+        raise HTTPException(status_code=404, detail="Bovine not found")
+    
+    # Example health entries (these could be fetched from a database or external service)
+    current_time = datetime.utcnow()
+    ten_days_ago = current_time - timedelta(days=10)
+        
+    health_entries = []
+    distress_calls = db.query(DistressCall).filter(
+        (DistressCall.bovine_id == bovine_id) &
+        (DistressCall.timestamp >= ten_days_ago) &
+        (DistressCall.probability > 0.7)
+    ).count()
+    
+    # Query lameness inferences for the bovine
+    lameness_inferences = db.query(LamenessInference).filter(
+        (LamenessInference.bovine_id == bovine_id) &
+        (LamenessInference.timestamp >= ten_days_ago) &
+        (LamenessInference.metric > 3)
+    ).count()
+
+
+    if distress_calls:
+        health_entries.append({
+            "problem": "High distress detected",
+            "solution": "Check for environmental stressors or health issues",
+            "status": "Pending",
+        })
+        health_entries.append({
+            "problem": "Abnormal vocalizations indicating distress",
+            "solution": "Ensure adequate food and water are available",
+            "status": "Pending",
+        })
+        health_entries.append({
+            "problem": "Increased heart rate",
+            "solution": "Monitor for signs of illness",
+            "status": "In Progress",
+        })
+    
+    if lameness_inferences:
+        health_entries.append({
+            "problem": "Lameness detected",
+            "solution": "Inspect hooves and provide necessary treatment",
+            "status": "In Progress",
+        })
+        health_entries.append({
+            "problem": "Reduced mobility due to lameness",
+            "solution": "Provide rest and monitor for signs of improvement",
+            "status": "In Progress",
+        })
+        
+    if not health_entries:
+        health_entries.append({
+            "problem": "No issues detected",
+            "solution": "Continue regular monitoring",
+            "status": "Normal",
+        })    
+    # Example image URL (this could be dynamically generated or fetched from a storage service)
+    image_url = "url"
+    
+    # Example status (this could be calculated based on health metrics or other data)
+  
+    
+    # Query distress calls for the bovine
+    distress_calls = db.query(DistressCall).filter(
+        (DistressCall.bovine_id == bovine_id) &
+        (DistressCall.timestamp >= ten_days_ago) &
+        (DistressCall.probability > 0.7)
+    ).count()
+    
+    # Query lameness inferences for the bovine
+    lameness_inferences = db.query(LamenessInference).filter(
+        (LamenessInference.bovine_id == bovine_id) &
+        (LamenessInference.timestamp >= ten_days_ago) &
+        (LamenessInference.metric > 3)
+    ).count()
+    
+    # Determine the status
+    status = "allGood"
+    if distress_calls > 0 and lameness_inferences > 0:
+        status = "needsImmediateAttention"
+    elif distress_calls > 0 or lameness_inferences > 0:
+        status = "needsAttention"
+    
+    return {
+        "id": bovine.id,
+        "name": bovine.name,
+        "imageUrl": image_url,
+        "status": status,
+        "healthEntries": health_entries,
+        "weight": bovine.weight,
+        "age": bovine.age,
+    }
+
+@router.get("/users/{user_id}/smsalerts")
+def get_sms_alerts(user_id: int, db: Session = Depends(get_db)):
+    alerts = db.query(SMSAlerts).filter(SMSAlerts.user_id == user_id).all()
+    if not alerts:
+        raise HTTPException(status_code=404, detail="No SMS alerts found for this user")
+    
+    messages = [
+        {
+            "id": alert.id,
+            "content": alert.message,
+            "timestamp": alert.timestamp.isoformat(),
+        }
+        for alert in alerts
+    ]
+    
+    return {"messages": messages}    

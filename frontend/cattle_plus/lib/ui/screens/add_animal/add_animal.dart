@@ -40,9 +40,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         },
         builder: (context, state) {
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('Add New Animal'),
-            ),
+            appBar: AppBar(title: const Text('Add New Animal')),
             body: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -58,12 +56,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                           color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: _imageFile != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(_imageFile!, fit: BoxFit.cover),
-                              )
-                            : const Icon(Icons.add_a_photo, size: 50),
+                        child:
+                            _imageFile != null
+                                ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.file(
+                                    _imageFile!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                                : const Icon(Icons.add_a_photo, size: 50),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -73,8 +75,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                         labelText: 'Name',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Name is required' : null,
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Name is required'
+                                  : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -84,8 +89,9 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Age is required' : null,
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true ? 'Age is required' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -95,8 +101,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (value) =>
-                          value?.isEmpty ?? true ? 'Weight is required' : null,
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Weight is required'
+                                  : null,
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<BreedType>(
@@ -105,12 +114,13 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                         labelText: 'Breed',
                         border: OutlineInputBorder(),
                       ),
-                      items: BreedType.values.map((breed) {
-                        return DropdownMenuItem(
-                          value: breed,
-                          child: Text(breed.displayName),
-                        );
-                      }).toList(),
+                      items:
+                          BreedType.values.map((breed) {
+                            return DropdownMenuItem(
+                              value: breed,
+                              child: Text(breed.displayName),
+                            );
+                          }).toList(),
                       onChanged: (value) {
                         setState(() {
                           _selectedBreed = value!;
@@ -135,15 +145,17 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: state is AddAnimalLoading
-                          ? null
-                          : () => _submitForm(context),
+                      onPressed:
+                          state is AddAnimalLoading
+                              ? null
+                              : () => _submitForm(context),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: state is AddAnimalLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('Add Animal'),
+                      child:
+                          state is AddAnimalLoading
+                              ? const CircularProgressIndicator()
+                              : const Text('Add Animal'),
                     ),
                   ],
                 ),
@@ -157,12 +169,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   Future<void> _pickImage() async {
     if (_isPickingImage) return; // Prevent concurrent picking operations
-    
+
     try {
       setState(() {
         _isPickingImage = true;
       });
-      
+
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
@@ -188,18 +200,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     final base64Image = base64Encode(bytes);
 
     context.read<AddAnimalCubit>().addBovine(
-          name: _nameController.text,
-          age: int.parse(_ageController.text),
-          weight: double.parse(_weightController.text),
-          breed: _selectedBreed.displayName,
-          fatherId: _fatherIdController.text.isEmpty
-              ? null
-              : _fatherIdController.text,
-          motherId: _motherIdController.text.isEmpty
-              ? null
-              : _motherIdController.text,
-          imageBase64: base64Image,
-        );
+      name: _nameController.text,
+      age: int.parse(_ageController.text),
+      weight: double.parse(_weightController.text),
+      breed: _selectedBreed.displayName,
+      fatherId:
+          _fatherIdController.text.isEmpty ? null : _fatherIdController.text,
+      motherId:
+          _motherIdController.text.isEmpty ? null : _motherIdController.text,
+      imageBase64: base64Image,
+    );
   }
 
   @override

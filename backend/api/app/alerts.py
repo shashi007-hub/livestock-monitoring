@@ -1,7 +1,7 @@
 import os
 from twilio.rest import Client
 
-from app.database.models import Bovine, User
+from db.models import Bovine, User
 
 
 # Twilio configuration
@@ -20,9 +20,9 @@ def _get_user_number_from_db(bovine_id):
     Returns:
         str: The user's phone number
     """
-    from app.database.db import db_session
+    from app.db.database import SessionLocal
     try:
-        db = db_session()
+        db = SessionLocal()
         bovine = db.query(Bovine).filter(Bovine.id == bovine_id).first()
         user = db.query(User).filter(User.id == bovine.owner_id).first()
         if user and user.phone_number:

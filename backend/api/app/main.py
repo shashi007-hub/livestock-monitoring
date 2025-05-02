@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
-from app.cron import my_cron_job
+from cron import my_cron_job
 from pytz import timezone
 from api.endpoints import router as api_router
 from db.database import Base, engine

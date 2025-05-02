@@ -9,7 +9,7 @@ class Bovine {
   final int? fatherId;
   final int? motherId;
   final int id;
-  
+
   const Bovine({
     required this.name,
     required this.age,
@@ -20,7 +20,7 @@ class Bovine {
     this.motherId,
     required this.id,
   });
-  
+
   factory Bovine.fromJson(Map<String, dynamic> json) {
     return Bovine(
       name: json['name'],
@@ -38,17 +38,11 @@ class Bovine {
 class BovineStatus {
   final int bovineId;
   final String status;
-  
-  const BovineStatus({
-    required this.bovineId,
-    required this.status,
-  });
-  
+
+  const BovineStatus({required this.bovineId, required this.status});
+
   factory BovineStatus.fromJson(Map<String, dynamic> json) {
-    return BovineStatus(
-      bovineId: json['bovine_id'],
-      status: json['status'],
-    );
+    return BovineStatus(bovineId: json['bovine_id'], status: json['status']);
   }
 }
 
@@ -90,14 +84,14 @@ class HomeLoaded extends HomeState {
     required List<Bovine> bovines,
     required List<BovineStatus> statuses,
   }) : super(
-    username: username,
-    city: city,
-    anomalies: anomalies,
-    averageSteps: averageSteps,
-    grazingVolume: grazingVolume,
-    bovines: bovines,
-    statuses: statuses,
-  );
+         username: username,
+         city: city,
+         anomalies: anomalies,
+         averageSteps: averageSteps,
+         grazingVolume: grazingVolume,
+         bovines: bovines,
+         statuses: statuses,
+       );
 }
 
 class HomeError extends HomeState {
@@ -113,12 +107,12 @@ class HomeError extends HomeState {
     List<Bovine> bovines = const [],
     List<BovineStatus> statuses = const [],
   }) : super(
-    username: username,
-    city: city,
-    anomalies: anomalies,
-    averageSteps: averageSteps,
-    grazingVolume: grazingVolume,
-    bovines: bovines,
-    statuses: statuses,
-  );
+         username: username,
+         city: city,
+         anomalies: anomalies,
+         averageSteps: averageSteps,
+         grazingVolume: grazingVolume,
+         bovines: bovines,
+         statuses: statuses,
+       );
 }
