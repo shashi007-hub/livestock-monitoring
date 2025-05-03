@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'animal_summary_cubit.dart';
 
 class AnimalSummaryScreen extends StatelessWidget {
@@ -40,7 +41,6 @@ class AnimalSummaryScreen extends StatelessWidget {
   }
 
   Widget _buildSummaryContent(BuildContext context, AnimalDetails animal) {
-    // Use the `getBovineImageUrl` function to get the image URL
     final imageUrl = getBovineImageUrl(int.parse(animal.id));
 
     return SafeArea(
@@ -71,7 +71,7 @@ class AnimalSummaryScreen extends StatelessWidget {
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Image.network(
-                          imageUrl, // Use the URL from `getBovineImageUrl`
+                          imageUrl,
                           fit: BoxFit.cover,
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
@@ -152,11 +152,162 @@ class AnimalSummaryScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                // Feeding Analysis Graph Section
+                const SizedBox(height: 24),
+                _buildSection(
+                  context,
+                  'Feeding Analysis',
+                  _buildFeedingGraph(animal.feedingAnalysis),
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFeedingGraph(List<FeedingAnalysis> feedingAnalysis) {
+    if (feedingAnalysis.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'No data recorded',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    final spots =
+        feedingAnalysis
+            .asMap()
+            .entries
+            .map(
+              (entry) =>
+                  FlSpot(entry.key.toDouble(), entry.value.avg.toDouble()),
+            )
+            .toList();
+
+    final maxYValue = feedingAnalysis
+        .map((e) => e.avg)
+        .reduce((a, b) => a > b ? a : b);
+
+    final maxYWithMargin = maxYValue + 0.2; // Add a small margin for spacing
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8.0),
+          child: Text(
+            'Year 2025',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+        feedingAnalysis.isEmpty
+            ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'No data recorded',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ),
+            )
+            : SizedBox(
+              height: 300,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: true,
+                    verticalInterval: 1,
+                    horizontalInterval: 1,
+                    getDrawingHorizontalLine:
+                        (value) =>
+                            FlLine(color: Colors.grey[300]!, strokeWidth: 1),
+                    getDrawingVerticalLine:
+                        (value) =>
+                            FlLine(color: Colors.grey[300]!, strokeWidth: 1),
+                  ),
+                  titlesData: FlTitlesData(
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          if (value > maxYValue)
+                            return const SizedBox.shrink(); // Hide labels beyond maxY
+                          return Text(
+                            '${value.toStringAsFixed(1)}h',
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index >= 0 && index < feedingAnalysis.length) {
+                            final date = feedingAnalysis[index].date;
+                            final shortDate = date.substring(5);
+
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                shortDate,
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border.all(color: Colors.grey[300]!, width: 1),
+                  ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      gradient: LinearGradient(
+                        colors: [Colors.blue, Colors.lightBlueAccent],
+                      ),
+                      barWidth: 4,
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blue.withOpacity(0.3),
+                            Colors.lightBlueAccent.withOpacity(0.1),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  minX: 0,
+                  maxX: (feedingAnalysis.length - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxYWithMargin, // Add margin to maxY for spacing
+                ),
+              ),
+            ),
+      ],
     );
   }
 

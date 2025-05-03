@@ -18,35 +18,30 @@ class AnimalSummaryCubit extends Cubit<AnimalSummaryState> {
       final response = await http.get(
         Uri.parse('http://$SERVER_URL/bovines/$bovineId/details'),
       );
-
-      // Mock response for now
-      final responseStatusCode = response.statusCode;
-
-      if (responseStatusCode == 200) {
-        // final data = json.decode(response.body);
-        final data1 = {
-          "id": 4,
-          "name": "Bessie",
-          "imageUrl":
-              "https://images.unsplash.com/photo-1527153857715-3908f2bae5e8?q=80&w=1988&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-          "status": "needsAttention",
-          "healthEntries": [
-            {
-              "problem": "Reduced appetite",
-              "solution": "Adjust feed mixture",
-              "status": "In Progress",
-            },
-            {
-              "problem": "Lower milk yield",
-              "solution": "Check for signs of stress",
-              "status": "Pending",
-            },
-          ],
-          "weight": 450.5,
-          "age": 36,
-        };
+      print("response for animal details");
+      print(response.body);
+      final mock = {
+        "id": bovineId,
+        "name": "Bovine $bovineId",
+        "imageUrl": "https://via.placeholder.com/200",
+        "status": "needsImmediateAttention",
+        "healthEntries": [
+          {"problem": "None", "solution": "N/A", "status": "Resolved"},
+        ],
+        "weight": 450.5,
+        "age": 5,
+        "feeding_analysis": [
+          {"date": "2023-01-01", "avg": 5.5},
+          {"date": "2023-01-02", "avg": 7.0},
+          {"date": "2023-01-03", "avg": 5.8},
+          {"date": "2023-01-04", "avg": 6.2},
+          {"date": "2023-01-05", "avg": 5.9},
+        ],
+      };
+      final status = response.statusCode; // Mock response status code
+      if (status == 200) {
         final data = json.decode(response.body);
-        print(response.body);
+
         final animal = AnimalDetails(
           id: data['id'].toString(),
           name: data['name'].toString(),
@@ -67,9 +62,26 @@ class AnimalSummaryCubit extends Cubit<AnimalSummaryState> {
               [],
           weight: (data['weight'] as num?)!.toDouble(),
           age: (data['age'] as num?)?.toInt() ?? 0,
+          feedingAnalysis:
+              (data['feeding_analysis'] != null &&
+                      (data['feeding_analysis'] as List).isNotEmpty)
+                  ? (data['feeding_analysis'] as List)
+                      .map(
+                        (entry) => FeedingAnalysis(
+                          date: entry['date'].toString(),
+                          avg: (entry['avg'] as num).toDouble(),
+                        ),
+                      )
+                      .toList()
+                  : [],
         );
 
-        emit(AnimalSummaryLoaded(animal));
+        emit(
+          AnimalSummaryLoaded(
+            animal: animal,
+            feedingAnalysis: animal.feedingAnalysis,
+          ),
+        );
       } else {
         emit(AnimalSummaryError('Failed to fetch animal details'));
       }

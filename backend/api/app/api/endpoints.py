@@ -389,7 +389,12 @@ def get_bovine_details(bovine_id: int, db: Session = Depends(get_db)):
             "problem": "No issues detected",
             "solution": "Continue regular monitoring",
             "status": "Normal",
-        })    
+        }) 
+    feeding_data = db.query(FeedingAnalytics).filter(FeedingAnalytics.bovine_id == bovine_id).order_by(FeedingAnalytics.date.asc()).all()
+    feeding_analysis = [
+        {"date": feeding.date.strftime("%Y-%m-%d"), "avg": feeding.average_feeding_time}
+        for feeding in feeding_data
+    ]       
     # Example image URL (this could be dynamically generated or fetched from a storage service)
     image_url = "url"
     
@@ -416,13 +421,15 @@ def get_bovine_details(bovine_id: int, db: Session = Depends(get_db)):
         status = "needsImmediateAttention"
     elif distress_calls > 0 or lameness_inferences > 0:
         status = "needsAttention"
-    
+    if len(feeding_analysis) <= 0:
+        feeding_analysis = None
     return {
         "id": bovine.id,
         "name": bovine.name,
         "imageUrl": image_url,
         "status": status,
         "healthEntries": health_entries,
+        "feeding_analysis": feeding_analysis,  # Add feeding analysis here
         "weight": bovine.weight,
         "age": bovine.age,
     }

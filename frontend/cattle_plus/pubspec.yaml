@@ -42,6 +42,7 @@ dependencies:
   hive_flutter: ^1.1.0 # Added Hive Flutter
   image_picker: ^1.1.2
   fluttertoast: ^8.2.4
+  fl_chart: ^0.64.0
 
 dev_dependencies:
   flutter_test:
