@@ -93,7 +93,8 @@ This system works in offline/online modes using Raspberry Pi or E2E cloud nodes,
 - Testing Sensors  
 - Lumpy Skin Disease Detection
 
-> 📸 [View Images & Recordings]([https://github.com/shashi007-hub/livestock-monitoring](https://photos.google.com/share/AF1QipNqzm3BySJmUFz0hH1mG1mRoyeG2IZXoVNX_F6hfE6UV6fIJ5qsC_p6GavInrij5w?key=U2hOTV83ZDV4ajR4SGNqWFV3V1UteHY5MVJKdk9n))
+> 📸 [View Images & Recordings](https://photos.google.com/share/AF1QipNqzm3BySJmUFz0hH1mG1mRoyeG2IZXoVNX_F6hfE6UV6fIJ5qsC_p6GavInrij5w?key=U2hOTV83ZDV4ajR4SGNqWFV3V1UteHY5MVJKdk9n)
+
 
 ---
 
