@@ -88,7 +88,7 @@ This system works in offline/online modes using Raspberry Pi or E2E cloud nodes,
 
 ## 📷 Case Study Snapshots
 
-- - [![Interviewing Cattle Farmers](https://example.com/path-to-thumbnail.jpg)](https://photos.app.goo.gl/FuCRPLhDK4wzN4Pg7)
+- Interviewing Cattle Farmers
 - Recording Cattle Audio  
 - Testing Sensors  
 - Lumpy Skin Disease Detection
