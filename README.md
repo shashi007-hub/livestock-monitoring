@@ -105,8 +105,15 @@ This system works in offline/online modes using Raspberry Pi or E2E cloud nodes,
 
 ---
 
-## 🤝 License
-This project is fully open-source and encourages local adaptation and contributions for long-term community ownership.
+## 👥 Team
+
+| Name                 | GitHub Handle                                  | Role                                                   |
+|----------------------|-------------------------------------------------|--------------------------------------------------------|
+| Dedeeepy Mogilisetti | [@dedeepya-M](https://github.com/dedeepya-M)   | Team Lead / Flutter Developer / ML Engineer           |
+| Srikhar Shashi D     | [@shashi007-hub](https://github.com/shashi007-hub) | Backend Engineer / Architect / Flutter Developer      |
+| Pranav Batchu        | [@batchu-29](https://github.com/batchu-29)     | Backend Engineer / ML Engineer                        |
+| Shreyas Desai        | [@sias01](https://github.com/sias01)           | Backend Engineer / ML Engineer                        |
+
 
 ---
 
