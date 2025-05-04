@@ -86,12 +86,19 @@ This system works in offline/online modes using Raspberry Pi or E2E cloud nodes,
 
 ---
 
-## 📷 Case Study Snapshots
 
-- Interviewing Cattle Farmers
-- Recording Cattle Audio  
-- Testing Sensors  
-- Lumpy Skin Disease Detection
+
+## 📸 Interviewing Cattle Farmers
+
+![Interviewing Cattle Farmers](https://github.com/shashi007-hub/livestock-monitoring/blob/main/IMG_4525.JPG?raw=true)
+
+&nbsp;
+
+## 🎤 Recording Cattle Audio
+
+![Recording Cattle Audio](https://github.com/shashi007-hub/livestock-monitoring/blob/main/IMG20250503120732.jpg?raw=true)
+
+## 📷 Other Snapshots and Videos
 
 > 📸 [View Images & Recordings](https://photos.google.com/share/AF1QipNqzm3BySJmUFz0hH1mG1mRoyeG2IZXoVNX_F6hfE6UV6fIJ5qsC_p6GavInrij5w?key=U2hOTV83ZDV4ajR4SGNqWFV3V1UteHY5MVJKdk9n)
 
