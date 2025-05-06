@@ -11,7 +11,7 @@ import wave
 import onnxruntime as ort
 from datetime import datetime, timedelta
 from app.database.db import db_session
-from app.database.models import DistressCall, FeedingPatterns, FeedingAnalytics, SMSAlerts
+from app.database.models import DistressCall, FeedingPatterns, FeedingAnalytics, SMSAlerts,LamenessInference,SkinDiseases
 from app.alerts import send_sms_alert
 
 class Predictions(Enum):
@@ -146,24 +146,24 @@ def microphone_pipeline(batch_data):
             distress_model = load_model("app/models/cow_model.h5", compile=True)
             frequency_class, probability = predict_from_wav(distress_model,temp_wav_path)
 
-            if frequency_class == Predictions.HFC or frequency_class == Predictions.LFC:
+            if frequency_class == Predictions.HFC: # or frequency_class == Predictions.LFC:
                 distress_call = DistressCall(
                     bovine_id=bovine_id,
                     timestamp=timestamp,
                     probability=probability  # You can decide what value to store
                 )
-                send_sms_alert("DISTRESS CALL", bovine_id)
+                send_sms_alert(f"ALERT! DISTRESS CALL from Bovine {bovine_id}!", bovine_id)
             
-            db.add(distress_call)
+                db.add(distress_call)
 
-            sms_alert = SMSAlerts(
-                user_id=1,
-                bovine_id=bovine_id,
-                timestamp=timestamp,
-                message="DISTRESS CALL"
-            )
+                sms_alert = SMSAlerts(
+                    user_id=1,
+                    bovine_id=bovine_id,
+                    timestamp=timestamp,
+                    message=f"ALERT! DISTRESS CALL from Bovine {bovine_id}!"
+                )
 
-            db.add(distress_call)
+                db.add(sms_alert)
 
             # Cleanup
             os.remove(temp_wav_path)
@@ -187,82 +187,141 @@ def microphone_pipeline(batch_data):
     finally:
         db.close()
 
-def parse_predictions(predictions):
-    SILENCE_THRESHOLD_SECONDS = 300  # 5 minutes
-    # predictions = list of (timestamp, label)
-    sessions = []
-    current_session = []
-    last_time = None
-
-    for timestamp, label in predictions:
-        if label in ['chew', 'bite', 'chew-bite']:
-            if last_time and (timestamp - last_time).total_seconds() > SILENCE_THRESHOLD_SECONDS:
-                if current_session:
-                    sessions.append(current_session)
-                current_session = []
-            current_session.append((timestamp, label))
-            last_time = timestamp
-
-    if current_session:
-        sessions.append(current_session)
-    return sessions
-
-def calculate_metrics(predictions):
-    sessions = parse_predictions(predictions)
-    total_feeding_time = timedelta()
-    feeding_frequencies = len(sessions)
-    meal_durations = []
-    feeding_rates = []
-    total_chews_bites = len(predictions)
-
-    for session in sessions:
-        start = session[0][0]
-        end = session[-1][0]
-        duration = end - start
-        duration_minutes = duration.total_seconds() / 60.0
-        meal_durations.append(duration_minutes)
-        total_feeding_time += duration
-
-        num_chews = len(session)
-        if duration_minutes > 0:
-            feeding_rates.append(num_chews / duration_minutes)
-        else:
-            feeding_rates.append(0)
-
-    # Metrics
-    FT = total_feeding_time.total_seconds() / 60.0
-    FF = feeding_frequencies
-    MD = meal_durations
-    AFT = FT / FF if FF > 0 else 0
-    IMI = []
-    for i in range(len(sessions) - 1):
-        gap = (sessions[i+1][0][0] - sessions[i][-1][0])
-        IMI.append(gap.total_seconds() / 3600.0)  # hours
-    FR = feeding_rates
-    TCPD = total_chews_bites
-
-    return {
-        "Feeding Time (FT)": FT,
-        "Feeding Frequency (FF)": FF,
-        "Meal Durations (MD)": MD,
-        "Average Feeding Time (AFT)": AFT,
-        "Inter-Meal Intervals (IMI)": IMI,
-        "Feeding Rates (FR)": FR,
-        "Total Chews/Bites Per Day": TCPD,
-    }
-
-def metrics_for_cron_job(predictions):
-    metrics = calculate_metrics(predictions)
-    print("Calculated Metrics:", metrics, flush=True)
-    return {
-        "Date": datetime.utcnow(),
-        "Bovine ID": predictions[0][0].bovine_id,
-        "Metrics":metrics
-        }
-
 def accelerometer_pipeline(batch_data):
-    pass
+    from app.process_lamness.preprocess_lamness import predict_lameness
+    from app.alerts import _get_bovin_name_from_db
+
+    print("Accelerometer pipeline triggered ✅", flush=True)
+    
+    try:
+        # Combine all acclerometer_data into a single list of dictionaries
+        combined_data = {"acclerometer_data": []}
+  
+        for message in batch_data['data']:
+            if 'acclerometer_data' in message:
+                combined_data["acclerometer_data"].append(message['acclerometer_data'])  # append dict
+            else:
+                print(f"Missing 'acclerometer_data' in message: {message}", flush=True)
+
+        print(f"Combined acclerometer_data data: {combined_data}", flush=True)
+
+        # Extract Bovine ID and a dummy timestamp (replace with real logic if needed)
+        bovine_id = batch_data['data'][0].get('bovine_id', 'unknown')
+        timestamp = datetime.now().isoformat()
+        print(f"Processing acclerometer_data message for Bovine {bovine_id} at {timestamp}", flush=True)
+        
+        # Predict lameness
+        try:
+            print("Calling predict_lameness with data:", combined_data, flush=True)
+            results = predict_lameness(combined_data)
+            if results >= 3:
+                lameness_inference = LamenessInference(
+                    bovine_id=bovine_id,
+                    metric=results,
+                    timestamp=timestamp
+                )
+                db_session.add(lameness_inference)
+                db_session.commit()
+                bovine_name = _get_bovin_name_from_db(bovine_id)
+                message = "Alert: Your animal, {}, is showing signs of lameness. Please check on them as soon as possible.".format(bovine_name)
+                send_sms_alert(message, bovine_id)
+
+                sms_alert = SMSAlerts(
+                user_id=1,
+                bovine_id=bovine_id,
+                timestamp=timestamp,
+                message="Lamness CALL"
+            )
+                print(sms_alert, flush=True)
+                db_session.add(sms_alert)
+                db_session.commit()
+            else:   
+                print(f"Lameness prediction for Bovine {bovine_id} is below threshold: {results}", flush=True)
+            print(f"Predicted lameness for Bovine {bovine_id} at {timestamp}: {results}", flush=True)
+        except Exception as e:
+            print(f"Error in predict_lameness: {e}", flush=True)
+
+    except Exception as e:
+        print(f"Error in accelerometer_pipeline: {e}", flush=True)
+
+    return "Accelerometer pipeline complete ✅"
+
+
+ 
+
 
 def camera_pipeline(batch_data):
-    pass
+    from app.process_images.crop_detect import detect_cows, batch_detect_diseases
+    from app.alerts import _get_bovin_name_from_db
+    from app.database.models import SkinDiseases, SMSAlerts
+    from app.alerts import send_sms_alert
+    from datetime import datetime
 
+    print("Camera pipeline triggered ✅", flush=True)
+
+    try:
+        for messages in batch_data['data']:
+            try:
+                # Process each message in the batch
+                bovine_id = messages.get('bovine_id')
+                if not bovine_id:
+                    print("Missing bovine_id in message", flush=True)
+                    continue
+
+                print("Bovine ID:", bovine_id, flush=True)
+
+                timestamp = datetime.strptime(messages['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
+                print(f"Processing camera message at {timestamp}", flush=True)
+
+                # Detect cows in the image
+                detected_cows = detect_cows(messages['image_raw'])
+                if not detected_cows:
+                    print(f"No cows detected for Bovine {bovine_id} at {timestamp}", flush=True)
+                    continue
+
+                # Detect diseases in the detected cows
+                diseases = batch_detect_diseases(detected_cows)
+                if not diseases:
+                    print(f"No diseases detected for Bovine {bovine_id} at {timestamp}", flush=True)
+                    continue
+
+                print("Diseases detected:", diseases, flush=True)
+
+                # Extract disease details
+                bovine_tag = diseases[0]['Bovine_tag']
+                disease = diseases[0]['disease_status'][0]
+                bovine_id = bovine_tag
+                # Save disease inference to the database
+                disease_inference = SkinDiseases(
+                    bovine_id=bovine_tag,
+                    timestamp=timestamp,
+                    disease=disease
+                )
+                db_session.add(disease_inference)
+                db_session.commit()
+                print(f"Disease inference saved for Bovine {bovine_tag}", flush=True)
+
+                # Send SMS alert
+                bovine_name = _get_bovin_name_from_db(bovine_tag)
+                message = f"Alert: Your animal, {bovine_name}, is showing signs of disease: {disease} skin disease. Please check on them as soon as possible."
+                send_sms_alert(message, bovine_tag)
+
+                # Save SMS alert to the database
+                sms_alert = SMSAlerts(
+                    user_id=1,
+                    bovine_id=bovine_id,
+                    timestamp=timestamp,
+                    message="Disease CALL"
+                )
+                db_session.add(sms_alert)
+                db_session.commit()
+                print(f"SMS alert saved for Bovine {bovine_id}", flush=True)
+
+            except Exception as e:
+                db_session.rollback()
+                print(f"Error processing message for Bovine {bovine_id}: {e}", flush=True)
+
+    except Exception as e:
+        print(f"Error in camera pipeline: {e}", flush=True)
+
+    return "Camera pipeline triggered ✅"

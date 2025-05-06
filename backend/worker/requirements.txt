@@ -12,3 +12,6 @@ librosa
 keras
 pillow
 tensorflow
+easyocr
+pandas
+joblib

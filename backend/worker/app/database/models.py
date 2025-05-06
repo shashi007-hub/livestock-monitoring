@@ -52,7 +52,7 @@ class Bovine(Base):
     father = relationship("Bovine", remote_side=[id], backref="children_father", foreign_keys=[father_id])
     mother = relationship("Bovine", remote_side=[id], backref="children_mother", foreign_keys=[mother_id])
     avg_steps = Column(Integer, nullable=True)  # Average steps per day
-
+    
 class DistressCall(Base):
     __tablename__ = 'distress_calls'
     
@@ -93,11 +93,11 @@ class FeedingAnalytics(Base):
     id = Column(Integer, primary_key=True)
     bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
     date = Column(DateTime, nullable=False)
-    feeding_time = Column(DateTime, nullable=False)  # Time when the bovine was fed
-    feeding_frequency = Column(Integer, nullable=False)  # Frequency of feeding in hours
-    average_feeding_time = Column(Float, nullable=False)  # Average time spent feeding in minutes
-    meal_interval = Column(Integer, nullable=False)  # Interval between meals in hours
-    feeding_rate = Column(Float, nullable=False)  # Rate of feeding in kg/hour
+    feeding_time = Column(DateTime, nullable=False)
+    feeding_frequency = Column(Integer, nullable=False)
+    average_feeding_time = Column(Float, nullable=False)
+    meal_interval = Column(Integer, nullable=False)
+    feeding_rate = Column(Float, nullable=False)
 
 
 class SMSAlerts(Base):
@@ -108,3 +108,12 @@ class SMSAlerts(Base):
     bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
     timestamp = Column(DateTime, nullable=False)
     message = Column(String, nullable=False)  # The content of the SMS alert
+
+class SkinDiseases(Base):
+    __tablename__ = 'skin_diseases'
+    
+    id = Column(Integer, primary_key=True)
+
+    bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    disease   = Column(String, nullable=False)   
