@@ -230,7 +230,7 @@ def accelerometer_pipeline(batch_data):
                 user_id=1,
                 bovine_id=bovine_id,
                 timestamp=timestamp,
-                message="Lamness CALL"
+                message=message
             )
                 print(sms_alert, flush=True)
                 db_session.add(sms_alert)
@@ -311,7 +311,7 @@ def camera_pipeline(batch_data):
                     user_id=1,
                     bovine_id=bovine_id,
                     timestamp=timestamp,
-                    message="Disease CALL"
+                    message=message
                 )
                 db_session.add(sms_alert)
                 db_session.commit()

@@ -105,3 +105,12 @@ class SMSAlerts(Base):
     bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
     timestamp = Column(DateTime, nullable=False)
     message = Column(String, nullable=False)  # The content of the SMS alert
+
+class SkinDiseases(Base):
+    __tablename__ = 'skin_diseases'
+    
+    id = Column(Integer, primary_key=True)
+
+    bovine_id = Column(Integer, ForeignKey(Bovine.id), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    disease   = Column(String, nullable=False) 

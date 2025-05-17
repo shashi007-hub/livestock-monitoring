@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 from sqlalchemy import func
-from app.db import db_session
-from app.db.models import (
+from db import SessionLocal
+from db.models import (
     Bovine, FeedingPatterns, FeedingAnalytics, SMSAlerts
 )
-from app.alerts import send_sms_alert
-
+from alerts import send_sms_alert
+db_session = SessionLocal()
 def parse_predictions(predictions):
     SILENCE_THRESHOLD_SECONDS = 300  # 5 minutes
     # predictions = list of (timestamp, label)

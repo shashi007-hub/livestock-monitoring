@@ -17,6 +17,7 @@ class AddAnimalCubit extends Cubit<AddAnimalState> {
     String? motherId,
     required String imageBase64,
   }) async {
+    print("Adding bovine...");
     print(name);
     print(age);
     print(weight);
@@ -25,12 +26,13 @@ class AddAnimalCubit extends Cubit<AddAnimalState> {
     print(motherId);
     print(imageBase64);
     try {
+      print("inside try");
       emit(AddAnimalLoading());
-      
+      print("inside emit");
       final box = await Hive.openBox('authBox');
-      final userId = int.parse(box.get('user_id',defaultValue: 1)) ;
-      
-
+      // final userId = box.get('user_id', defaultValue: 1);
+      final userId = 2;
+      print("hey");
       final response = await http.post(
         Uri.parse('http://$SERVER_URL/bovines/'),
         body: jsonEncode({
@@ -40,6 +42,9 @@ class AddAnimalCubit extends Cubit<AddAnimalState> {
           'breed': breed,
           'image_base64': imageBase64,
           'owner_id': userId,
+          'father_id': fatherId,
+          'mother_id': motherId,
+          'location': 'Farm2',
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -49,9 +54,11 @@ class AddAnimalCubit extends Cubit<AddAnimalState> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         emit(AddAnimalSuccess());
       } else {
+        print("error");
         emit(AddAnimalError('Failed to add bovine: ${response.body}'));
       }
     } catch (e) {
+      print("exception");
       print(e.toString());
       emit(AddAnimalError('Failed to add bovine: $e'));
     }
@@ -69,7 +76,7 @@ enum BreedType {
   ONGOLE,
   KANGAYAM,
   HALLIKAR,
-  OTHER
+  OTHER,
 }
 
 extension BreedTypeExtension on BreedType {

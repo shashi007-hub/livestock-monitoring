@@ -14,7 +14,9 @@ class SplashCubit extends Cubit<SplashState> {
     // Check server connectivity
     final serverOk = await checkServerConnectivity();
     if (!serverOk) {
-      emit(SplashError('Cannot connect to server. Please check your connection.'));
+      emit(
+        SplashError('Cannot connect to server. Please check your connection.'),
+      );
       return;
     }
     // 1) Check Hive for user/jwt
@@ -30,9 +32,12 @@ class SplashCubit extends Cubit<SplashState> {
 
   Future<bool> checkServerConnectivity() async {
     try {
+      print("SERVER_URL: '$SERVER_URL'");
+      print("Attempting to connect to server at: http://$SERVER_URL/health");
       final response = await http.get(Uri.parse('http://$SERVER_URL/health'));
       return response.statusCode == 200;
     } catch (e) {
+      print(e);
       return false;
     }
   }
