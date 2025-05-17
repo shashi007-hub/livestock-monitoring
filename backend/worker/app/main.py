@@ -80,7 +80,7 @@ def   run_inference_and_publish(messages):
         return None
     
     print(f"[{WORKER_ID}] Collected {len(messages)} messages for processing")
-    print(messages)
+    # print(messages)
         
     # All messages in a batch should have the same topic and bovine_id
     topic = messages[0]["topic"]

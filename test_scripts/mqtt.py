@@ -37,7 +37,7 @@ if __name__ == "__main__":
     port = 1883  # Replace with your MQTT port
     topics = ["inference/microphone"]  # Replace with your desired topic
     import random
-    wav_file_path = "C:/Users/Shreyas Desai/Documents/jaw-movements/segmented_audios/recording_01_bite_0.wav"  # Replace with the path to your .wav file
+    wav_file_path = "test_scripts/recording_01_bite_0.wav"  # Replace with the path to your .wav file
 
     raw_audio_data = read_wav_as_raw(wav_file_path)
     message = {

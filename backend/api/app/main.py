@@ -15,7 +15,7 @@ scheduler = BackgroundScheduler()
 async def lifespan(app: FastAPI):
     # Startup logic
     ist = timezone('Asia/Kolkata')
-    scheduler.add_job(my_cron_job, 'cron', hour=18, minute=00, timezone=ist)  
+    scheduler.add_job(my_cron_job, 'cron', hour=15, minute=42, timezone=ist)  
     scheduler.start()
     print("Scheduler started.")
 

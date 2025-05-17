@@ -110,7 +110,7 @@ def ExtractFeaturesFromJSON(json_input):
 
         # Load the scaler
         print("Loading scaler...")
-        scaler_filename = "app/models/Scalar_lamness.pkl"
+        scaler_filename = "../app/models/Scalar_lamness.pkl"
         if not os.path.exists(scaler_filename):
             print(f"Scaler file '{scaler_filename}' does not exist.")
             return None
@@ -152,7 +152,7 @@ def predict_lameness(data):
         print("after FEdata", FEdata.head())
         predictions = []
 
-        model_path = 'app/models/trained_modelnew.pkl'
+        model_path = '../app/models/trained_modelnew.pkl'
         if not os.path.exists(model_path):
             print(f"Model file '{model_path}' does not exist.")
             return None
@@ -173,7 +173,7 @@ def predict_lameness(data):
         print(f"Mean prediction: {mean_prediction}")
         prediction = math.ceil(mean_prediction)
         print(f"Final prediction (rounded): {prediction}")
-        prediction = 4
+        
         return prediction
     except Exception as e:
         print(f"Error in predict_lameness: {e}")

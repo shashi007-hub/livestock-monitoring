@@ -2,7 +2,6 @@
 # HENCE ITS BETTER TO JUST IMPORT INSIDE FUNCTIONS AND **NOT HAVE GLOBAL SCOPE** TO MAKE SURE THERE ARE NO LOCK ISSUES
 
 from enum import Enum
-from keras.models import load_model 
 from PIL import Image
 import librosa
 import numpy as np
@@ -28,22 +27,52 @@ def scale_melspec(mel_spec):
     return img_array
 
     
-def predict_from_wav(Model,WAV):
+# def predict_from_wav(Model,WAV):
+#     y, sr = librosa.load(WAV)
+#     mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=90)
+#     log_mel_spec = librosa.power_to_db(mel_spec)
+#     scaled_mel_spec = scale_melspec(log_mel_spec)
+
+#         # Shape it to model input: (1, H, W, 3)
+#     input_tensor = np.repeat(scaled_mel_spec[..., np.newaxis], 3, axis=-1)
+#     input_tensor = np.expand_dims(input_tensor, axis=0)
+
+#     print("Input tensor generated")
+
+#     print("Input shape:", input_tensor.shape)
+#     print("Model input shape:", Model.input_shape)
+
+#     prediction = Model.predict(input_tensor, verbose=1)
+
+#     print("Prediction made")
+
+#     pred_class = np.argmax(prediction)
+#     confidence = float(np.max(prediction))
+
+#     if pred_class == 1:
+#         return Predictions.HFC, confidence
+#     elif pred_class == 0:
+#         return Predictions.LFC, confidence
+def predict_from_wav(ModelPath, WAV):
     y, sr = librosa.load(WAV)
     mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=90)
     log_mel_spec = librosa.power_to_db(mel_spec)
     scaled_mel_spec = scale_melspec(log_mel_spec)
 
-        # Shape it to model input: (1, H, W, 3)
+    # Shape it to model input: (1, H, W, 3)
     input_tensor = np.repeat(scaled_mel_spec[..., np.newaxis], 3, axis=-1)
-    input_tensor = np.expand_dims(input_tensor, axis=0)
+    input_tensor = np.expand_dims(input_tensor, axis=0).astype(np.float32)
 
     print("Input tensor generated")
 
     print("Input shape:", input_tensor.shape)
-    print("Model input shape:", Model.input_shape)
 
-    prediction = Model.predict(input_tensor, verbose=1)
+    # Load ONNX model and run inference
+    session = ort.InferenceSession(ModelPath)
+    input_name = session.get_inputs()[0].name
+    print("Model input name:", input_name)
+
+    prediction = session.run(None, {input_name: input_tensor})[0]
 
     print("Prediction made")
 
@@ -52,9 +81,10 @@ def predict_from_wav(Model,WAV):
 
     if pred_class == 1:
         return Predictions.HFC, confidence
+        # return "HFC", confidence
     elif pred_class == 0:
         return Predictions.LFC, confidence
-
+        # return "LFC", confidence
 
 def validate_batch(batch_data):
     """Validate that all messages in batch are from same bovine and have required fields"""
@@ -104,13 +134,16 @@ def run_inference(onnx_model_path, audio_path):
     predicted_class = outputs[0][0]
     return predicted_class
 
+
+
+
 def microphone_pipeline(batch_data):
     """
     Process a batch of audio data from the microphone, run inference using ONNX model,
     and save results to the database.
     """
 
-    onnx_model_path = "app/models/xgb_model.onnx"
+    onnx_model_path = "../app/models/xgb_model.onnx"
     # Constants
     LABELS = {0: "chew", 1: "bite", 2: "chew-bite"}
 
@@ -143,7 +176,7 @@ def microphone_pipeline(batch_data):
             print(f"Predicted label for Bovine {bovine_id} at {timestamp}: {label}", flush=True)
 
             # Inference with Keras model (HFC / LFC)
-            distress_model = load_model("app/models/cow_model.h5", compile=True)
+            distress_model = "../app/models/cow_model.onnx"
             frequency_class, probability = predict_from_wav(distress_model,temp_wav_path)
 
             if frequency_class == Predictions.HFC: # or frequency_class == Predictions.LFC:
@@ -203,7 +236,7 @@ def accelerometer_pipeline(batch_data):
             else:
                 print(f"Missing 'acclerometer_data' in message: {message}", flush=True)
 
-        print(f"Combined acclerometer_data data: {combined_data}", flush=True)
+        # print(f"Combined acclerometer_data data: {combined_data}", flush=True)
 
         # Extract Bovine ID and a dummy timestamp (replace with real logic if needed)
         bovine_id = batch_data['data'][0].get('bovine_id', 'unknown')
@@ -212,7 +245,7 @@ def accelerometer_pipeline(batch_data):
         
         # Predict lameness
         try:
-            print("Calling predict_lameness with data:", combined_data, flush=True)
+            # print("Calling predict_lameness with data:", combined_data, flush=True)
             results = predict_lameness(combined_data)
             if results >= 3:
                 lameness_inference = LamenessInference(
@@ -260,6 +293,7 @@ def camera_pipeline(batch_data):
     print("Camera pipeline triggered ✅", flush=True)
 
     try:
+        print('total messages',len(messages), flush=True)
         for messages in batch_data['data']:
             try:
                 # Process each message in the batch

@@ -74,18 +74,19 @@ def average(lst):
     return sum(lst) / len(lst) if lst else 0
 
 def my_cron_job():
-    print("Cron job executed", flush=True)
-    db = db_session()
+    print("Cron job entered", flush=True)
+    db = db_session
     try:
+        print("Cron job started", flush=True)
         today = datetime.utcnow().date()
         ten_days_ago = today - timedelta(days=10)
 
         bovines = db.query(Bovine).all()
-
+        print(f"Total bovines: {len(bovines)}", flush=True)
         for bovine in bovines:
             bovine_id = bovine.id
             owner_id = bovine.owner_id
-
+            print(f"Processing bovine {bovine_id}", flush=True)
             # Get last 10 days of analytics (excluding today)
             past_analytics = db.query(FeedingAnalytics)\
                 .filter(
@@ -93,7 +94,7 @@ def my_cron_job():
                     FeedingAnalytics.date >= ten_days_ago,
                     FeedingAnalytics.date < today
                 ).all()
-
+            print(f"Past analytics count: {len(past_analytics)}", flush=True)
             if len(past_analytics) < 5:
                 continue  # Not enough history for comparison
 
@@ -110,7 +111,7 @@ def my_cron_job():
             label_map = {0: "chew", 1: "bite", 2: "chew-bite"}
             today_data = [(p.timestamp, label_map[p.bite_chew]) for p in today_patterns]
             today_metrics = calculate_metrics(today_data)
-
+            print(f"Today's metrics: {today_metrics}", flush=True)
             # Extract today's scalar values
             today_vals = {
                 "FT": today_metrics["Feeding Time (FT)"],

@@ -135,3 +135,5 @@ cython_debug/
 
 
 /mosquitto
+
+**/models/
