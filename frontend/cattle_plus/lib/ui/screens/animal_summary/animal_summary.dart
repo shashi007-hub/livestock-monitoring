@@ -2,6 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'animal_summary_cubit.dart';
+import 'package:easy_localization/easy_localization.dart';
+
+final Map<String, String> problemKeyMap = {
+  "High distress detected": "health.problem.high_distress_detected",
+  "Abnormal vocalizations indicating distress":
+      "health.problem.abnormal_vocalizations",
+  "Increased heart rate": "health.problem.increased_heart_rate",
+  "Lameness detected": "health.problem.lameness_detected",
+  "Reduced mobility due to lameness": "health.problem.reduced_mobility",
+};
+
+final Map<String, String> solutionKeyMap = {
+  "Check for environmental stressors or health issues":
+      "health.solution.check_environmental_stressors",
+  "Ensure adequate food and water are available":
+      "health.solution.ensure_food_water",
+  "Monitor for signs of illness": "health.solution.monitor_illness",
+  "Inspect hooves and provide necessary treatment":
+      "health.solution.inspect_hooves",
+  "Provide rest and monitor for signs of improvement":
+      "health.solution.provide_rest",
+};
 
 class AnimalSummaryScreen extends StatelessWidget {
   final String bovineId;
@@ -15,7 +37,7 @@ class AnimalSummaryScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            'Animal Summary',
+            'Animal Summary'.tr(),
             style: Theme.of(context).textTheme.headlineSmall,
           ),
         ),
@@ -111,7 +133,7 @@ class AnimalSummaryScreen extends StatelessWidget {
                 // Status Section
                 _buildSection(
                   context,
-                  'Current Status',
+                  'Current Status'.tr(),
                   _getStatusWidget(context, animal.status),
                 ),
 
@@ -119,20 +141,26 @@ class AnimalSummaryScreen extends StatelessWidget {
                 if (animal.status != AnimalStatus.allGood)
                   _buildSection(
                     context,
-                    'Problems Identified',
+                    'Problems Identified'.tr(),
                     Table(
                       border: TableBorder.all(),
                       children:
                           animal.healthEntries.map((entry) {
+                            final problemKey =
+                                problemKeyMap[entry.problem] ?? entry.problem;
+                            final solutionKey =
+                                solutionKeyMap[entry.solution] ??
+                                entry.solution;
+
                             return TableRow(
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.all(8.0),
-                                  child: Center(child: Text(entry.problem)),
+                                  child: Center(child: Text(problemKey.tr())),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.all(8.0),
-                                  child: Text(entry.solution),
+                                  child: Text(solutionKey.tr()),
                                 ),
                               ],
                             );
@@ -146,7 +174,7 @@ class AnimalSummaryScreen extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24.0),
                       child: Text(
-                        'All Good! 🎉',
+                        'All Good! 🎉'.tr(),
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(color: Colors.green[800]),
                       ),
@@ -157,7 +185,7 @@ class AnimalSummaryScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 _buildSection(
                   context,
-                  'Feeding Analysis',
+                  'Feeding Analysis'.tr(),
                   _buildFeedingGraph(animal.feedingAnalysis),
                 ),
               ],
@@ -170,11 +198,11 @@ class AnimalSummaryScreen extends StatelessWidget {
 
   Widget _buildFeedingGraph(List<FeedingAnalysis> feedingAnalysis) {
     if (feedingAnalysis.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
           child: Text(
-            'No data recorded',
+            'No data recorded'.tr(),
             style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ),
@@ -208,11 +236,11 @@ class AnimalSummaryScreen extends StatelessWidget {
           ),
         ),
         feedingAnalysis.isEmpty
-            ? const Center(
+            ? Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Text(
-                  'No data recorded',
+                  'No data recorded'.tr(),
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ),
@@ -346,17 +374,17 @@ class AnimalSummaryScreen extends StatelessWidget {
     switch (status) {
       case AnimalStatus.needsImmediateAttention:
         color = Colors.red;
-        text = 'Needs Immediate Attention';
+        text = 'Needs Immediate Attention'.tr();
         icon = Icons.error;
         break;
       case AnimalStatus.needsAttention:
         color = Colors.orange;
-        text = 'Needs Attention';
+        text = 'Needs Attention'.tr();
         icon = Icons.warning;
         break;
       case AnimalStatus.allGood:
         color = Colors.green;
-        text = 'All Good';
+        text = 'All Good'.tr();
         icon = Icons.check_circle;
         break;
     }

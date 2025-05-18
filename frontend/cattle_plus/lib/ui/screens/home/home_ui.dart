@@ -9,6 +9,7 @@ import 'package:cattle_plus/ui/screens/add_animal/add_animal.dart';
 import 'package:cattle_plus/ui/screens/home/home_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -48,7 +49,7 @@ class HomeScreen extends StatelessWidget {
                             kToolbarHeight + MediaQuery.of(context).padding.top;
 
                         return FlexibleSpaceBar(
-                          title: isCollapsed ? const Text('Home') : null,
+                          title: isCollapsed ? Text('Home'.tr()) : null,
                           centerTitle: true,
                           background: Center(
                             child: Row(
@@ -78,8 +79,8 @@ class HomeScreen extends StatelessWidget {
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        const Text(
-                                          'Anomalies',
+                                        Text(
+                                          'Anomalies'.tr(),
                                           style: TextStyle(color: Colors.black),
                                         ),
                                         Row(
@@ -105,8 +106,8 @@ class HomeScreen extends StatelessWidget {
                                 Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text(
-                                      'Avg Steps',
+                                    Text(
+                                      'Avg Steps'.tr(),
                                       style: TextStyle(color: Colors.black),
                                     ),
                                     Row(
@@ -130,8 +131,8 @@ class HomeScreen extends StatelessWidget {
                                 Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text(
-                                      'Grazing Volume',
+                                    Text(
+                                      'Grazing Volume'.tr(),
                                       style: TextStyle(color: Colors.black),
                                     ),
                                     Row(

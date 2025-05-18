@@ -1,6 +1,8 @@
 import 'package:cattle_plus/const.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Add intl package for date formatting
+import 'package:intl/intl.dart';
+import 'package:easy_localization/easy_localization.dart';
+// Add intl package for date formatting
 
 class AnimalTile extends StatelessWidget {
   final String name;
@@ -33,11 +35,11 @@ class AnimalTile extends StatelessWidget {
   String _getStatusText(AnimalStatus status) {
     switch (status) {
       case AnimalStatus.normal:
-        return 'Normal';
+        return 'Normal'.tr();
       case AnimalStatus.needsAttention:
-        return 'Needs Attention';
+        return 'Needs Attention'.tr();
       case AnimalStatus.danger:
-        return 'Danger';
+        return 'Danger'.tr();
       // No default needed as all enum cases are handled
     }
   }
@@ -119,7 +121,7 @@ class AnimalTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Status: $statusText',
+                        tr('status_label', args: [statusText]),
                         style: TextStyle(
                           color: Colors.white.withOpacity(1),
                           fontSize: 16,
@@ -134,7 +136,8 @@ class AnimalTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Last Update: $formattedLastSeen',
+                        // 'Last Update: $formattedLastSeen',
+                        tr('last_update', args: [formattedLastSeen]),
                         style: TextStyle(
                           color: Colors.white.withOpacity(1),
                           fontSize: 14,
