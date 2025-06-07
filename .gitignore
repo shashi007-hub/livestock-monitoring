@@ -137,3 +137,7 @@ cython_debug/
 /mosquitto
 
 **/models/
+
+*.raw
+*.wav
+tempCodeRunnerFile.py
