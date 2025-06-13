@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 from app.database.db import db_session
 from app.database.models import DistressCall, FeedingPatterns, FeedingAnalytics, SMSAlerts,LamenessInference,SkinDiseases
 from app.alerts import send_sms_alert
-import logging
 
 class Predictions(Enum):
     HFC = "HFC"
@@ -27,35 +26,31 @@ class Predictions(Enum):
 #     img_array = np.array(img)
 #     return img_array
 
-import numpy as np
-from PIL import Image
 import librosa
 
 def scale_melspec(mel_spec):
     target_size = (90, 200)
+    
+    # Log-scale and clip the values
+    mel_spec = librosa.util.normalize(mel_spec)
+    
+    # Clip to valid range [-1, 1]
+    mel_spec = np.clip(mel_spec, -1, 1)
 
-    # Step 1: Normalize
-    norm_spec = librosa.util.normalize(mel_spec)
+    # Replace NaNs and infs
+    mel_spec = np.nan_to_num(mel_spec, nan=0.0, posinf=1.0, neginf=-1.0)
 
-    # Step 2: Replace NaNs and Infs
-    norm_spec = np.nan_to_num(norm_spec, nan=0.0, posinf=0.0, neginf=0.0)
+    # Rescale to [0, 255]
+    mel_spec = ((mel_spec + 1) / 2) * 255
+    mel_spec = mel_spec.astype(np.uint8)
 
-    # Step 3: Clip to [0, 1] range to avoid surprises
-    norm_spec = np.clip(norm_spec, 0.0, 1.0)
-
-    # Step 4: Convert to uint8 (0–255)
-    norm_spec = (norm_spec * 255).astype(np.uint8)
-
-    # Step 5: Resize image
-    img = Image.fromarray(norm_spec)
+    img = Image.fromarray(mel_spec)
     img = img.resize(target_size, Image.Resampling.LANCZOS)
     img_array = np.array(img)
 
-    # Step 6: Convert to 3-channel RGB if needed
-    if len(img_array.shape) == 2:
-        img_array = np.stack([img_array] * 3, axis=-1)  # Shape: (H, W, 3)
-
     return img_array
+
+
 
     
 # def predict_from_wav(Model,WAV):
@@ -85,53 +80,37 @@ def scale_melspec(mel_spec):
 #     elif pred_class == 0:
 #         return Predictions.LFC, confidence
 def predict_from_wav(ModelPath, WAV):
-    try:
-        if not os.path.exists(WAV):
-            raise FileNotFoundError(f"WAV file not found at: {WAV}")
-        
-        if not os.path.exists(ModelPath):
-            raise FileNotFoundError(f"Model file not found at: {ModelPath}")
-        
-        # Load audio
-        y, sr = librosa.load(WAV)
-        mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=90)
-        log_mel_spec = librosa.power_to_db(mel_spec)
-        scaled_mel_spec = scale_melspec(log_mel_spec)
+    y, sr = librosa.load(WAV)
+    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=2048, hop_length=512, n_mels=90)
+    log_mel_spec = librosa.power_to_db(mel_spec)
+    scaled_mel_spec = scale_melspec(log_mel_spec)
 
-        # Prepare input tensor (1, H, W, 3)
-        input_tensor = np.repeat(scaled_mel_spec[..., np.newaxis], 3, axis=-1)
-        input_tensor = np.expand_dims(input_tensor, axis=0).astype(np.float32)
+    # Shape it to model input: (1, H, W, 3)
+    input_tensor = np.repeat(scaled_mel_spec[..., np.newaxis], 3, axis=-1)
+    input_tensor = np.expand_dims(input_tensor, axis=0).astype(np.float32)
 
-        logging.info(f"Input tensor shape: {input_tensor.shape}")
+    print("Input tensor generated")
 
-        # Load ONNX model and infer
-        session = ort.InferenceSession(ModelPath)
-        input_name = session.get_inputs()[0].name
+    print("Input shape:", input_tensor.shape)
 
-        logging.info(f"Model input name: {input_name}")
-        prediction = session.run(None, {input_name: input_tensor})[0]
+    # Load ONNX model and run inference
+    session = ort.InferenceSession(ModelPath)
+    input_name = session.get_inputs()[0].name
+    print("Model input name:", input_name)
 
-        logging.info("Prediction successful")
+    prediction = session.run(None, {input_name: input_tensor})[0]
 
-        pred_class = np.argmax(prediction)
-        confidence = float(np.max(prediction))
+    print("Prediction made")
 
-        if pred_class == 1:
-            return Predictions.HFC, confidence
-        elif pred_class == 0:
-            return Predictions.LFC, confidence
-        else:
-            raise ValueError(f"Unknown class predicted: {pred_class}")
-
-    except FileNotFoundError as fnf_error:
-        logging.error(fnf_error)
-    except ort.OrtException as ort_error:
-        logging.error(f"ONNX Runtime error: {ort_error}", exc_info=True)
-    except Exception as e:
-        logging.error(f"Unexpected error during prediction: {e}", exc_info=True)
-    
-    # Fallback return
-    return None, 0.0
+    pred_class = np.argmax(prediction)
+    confidence = float(np.max(prediction))
+    print("Predicted class:", pred_class, "with confidence:", confidence)
+    if pred_class == 1:
+        return Predictions.HFC, confidence
+        # return "HFC", confidence
+    elif pred_class == 0:
+        return Predictions.LFC, confidence
+        # return "LFC", confidence
 
 def validate_batch(batch_data):
     """Validate that all messages in batch are from same bovine and have required fields"""
@@ -146,26 +125,13 @@ def validate_batch(batch_data):
 
     # Helper functions
 # def save_raw_to_wav(raw_data, output_wav_path, sample_rate=22050):
-    
-#     try:
-#         with wave.open(output_wav_path, 'wb') as wf:
-#             wf.setnchannels(1)        # Mono
-#             wf.setsampwidth(2)        # 16 bits = 2 bytes
-#             wf.setframerate(sample_rate)
-#             if isinstance(raw_data, list):
-#                 raw_data = bytes(raw_data)
-#             # If raw_data is a string, convert to bytes by encoding or decoding
-#             elif isinstance(raw_data, str):
-#                 # If raw_data is a string of raw bytes in a str object (e.g., latin1)
-#                 # You can try encoding with latin1 to get the bytes unchanged
-#                 raw_data = raw_data.encode('latin1')
-#             wf.writeframes(raw_data)
-#         logging.info(f"Saved raw audio to {output_wav_path}")
-#     except Exception as e:
-#         logging.error(f"Error saving raw audio to {output_wav_path}: {e}", exc_info=True)
-
-import logging
-import wave
+#     with wave.open(output_wav_path, 'wb') as wf:
+#         wf.setnchannels(1)        # Mono
+#         wf.setsampwidth(2)         # 16 bits = 2 bytes
+#         wf.setframerate(sample_rate)
+#         if isinstance(raw_data, list):
+#             raw_data = bytes(raw_data)
+#         wf.writeframes(raw_data)
 
 def save_raw_to_wav(raw_chunks, output_wav_path, sample_rate=22050):
     try:
@@ -179,9 +145,10 @@ def save_raw_to_wav(raw_chunks, output_wav_path, sample_rate=22050):
             wf.setframerate(sample_rate)
             wf.writeframes(raw_bytes)
 
-        logging.info(f"Saved raw audio to {output_wav_path}")
+        print(f"Saved raw audio to {output_wav_path}")
     except Exception as e:
-        logging.error(f"Error saving raw audio to {output_wav_path}: {e}", exc_info=True)
+        print(f"Error saving raw audio to {output_wav_path}: {e}", exc_info=True)
+
 
 def extract_mfcc(y, sr, n_mfcc=13, hop_length=256, n_fft=1024):
     mfcc_feat = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc,
@@ -218,8 +185,6 @@ def microphone_pipeline(batch_data):
     and save results to the database.
     """
 
-    print("Microphone pipeline triggered ✅", flush=True)
-
     onnx_model_path = "../app/models/xgb_model.onnx"
     # Constants
     LABELS = {0: "chew", 1: "bite", 2: "chew-bite"}
@@ -227,20 +192,20 @@ def microphone_pipeline(batch_data):
     # Main pipeline
     print(f"Processing microphone batch data: {len(batch_data['data'])} messages for bovine {batch_data['data'][0]['bovine_id']}", flush=True)
     db = db_session()
-    print("Database session started", flush=True)
+
     try:
         predictions = []
         # print("*****", batch_data['data'])
         for message in batch_data['data']:
-            print("Processing message:", flush=True)
             bovine_id = message['bovine_id']
-            print("Bovine ID:", bovine_id, flush=True)
+            print(f"Processing message for Bovine {bovine_id}", flush=True)
             timestamp = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")  # Assume ISO format
-            print(f"Processing microphone message for Bovine {bovine_id} at {timestamp}", flush=True)
+            print(f"Timestamp for Bovine {bovine_id}: {timestamp}", flush=True)
             # Save raw audio to wav
             temp_wav_path = f"/tmp/{bovine_id}_{timestamp.timestamp()}.wav"
             print("Saving raw audio to wav:", temp_wav_path, flush=True)
-            save_raw_to_wav(message['audio_raw'], temp_wav_path)
+            print(message['data'], flush=True)
+            save_raw_to_wav(message['data'], temp_wav_path)
             print("Saved raw audio to wav:", temp_wav_path, flush=True)
 
             # Inference
@@ -287,7 +252,8 @@ def microphone_pipeline(batch_data):
                 bite_chew=label_idx
             )
             db.add(feeding_pattern)
-
+            print(f"Saved feeding pattern for Bovine {bovine_id} at {timestamp}: {label_idx}", flush=True)
+            print("processed audio data", flush=True)
         db.commit()
 
         return {"status": "success", "predictions": predictions}

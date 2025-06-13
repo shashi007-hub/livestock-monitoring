@@ -24,11 +24,11 @@ MQTT_TOPIC_CAMERA = os.getenv("MQTT_TOPIC_CAMERA", "inference/camera")
 IS_DISTRIBUTED = False
 
 BATCH_TIMEOUT = 500
-mic_request_count = 0
-
+# mic_request_count = 0
+mic_batch_state = {}  # {bovine_id: {"is_started": False, "data_count": 0}}
 
 BATCH_THRESHOLDS = {
-    "inference/microphone": 1,  # 220 + 2 for start/end messages
+    "inference/microphone": 1,  
     "inference/accelerometer": 20,
     "inference/camera": 1
 }
@@ -111,73 +111,106 @@ def   run_inference_and_publish(messages):
     return result
 
 def on_message(client, userdata, msg):
-    global mic_request_count
     try:
         message = json.loads(msg.payload.decode())
         topic = msg.topic
         message["topic"] = topic
 
-        if "bovine_id" not in message:
-            logging.warning(f"[{WORKER_ID}] Message missing bovine_id field")
-            return
-
-        bovine_id = message["bovine_id"]
-
         if topic == MQTT_TOPIC_MIC:
-            mic_request_count += 1
-            logging.info(f"[{WORKER_ID}] Microphone topic request count: {mic_request_count}")
-
-            mic_state = queue_manager.mic_batches.get(bovine_id, {"start": None, "chunks": [], "ended": False})
+            bovine_id = message.get("bovine_id")
             msg_type = message.get("type")
 
+            if bovine_id is None:
+                print(f"[{WORKER_ID}] Error: Message missing bovine_id field")
+                return
+
+            # Initialize state if not present
+            if bovine_id not in mic_batch_state:
+                mic_batch_state[bovine_id] = {"is_started": False, "data_count": 0, "data": [],"start_at": None}
+
+            state = mic_batch_state[bovine_id]
+
             if msg_type == "start":
-                if mic_state["start"] is not None and not mic_state["ended"]:
-                    logging.warning(f"[{WORKER_ID}] New start before end. Discarding previous batch for {bovine_id}.")
-                mic_state = {"start": message, "chunks": [], "ended": False}
-                logging.info(f"[{WORKER_ID}] Received start for {bovine_id}")
+                if "chunks" not in message or message["chunks"] != 220:
+                    print(f"[{WORKER_ID}] WARNING: Start message for bovine {bovine_id} missing or invalid 'chunks'. Discarding batch.")
+                    state["is_started"] = False
+                    state["data"] = []
+                    state["data_count"] = 0
+                    return
+                if state["is_started"]:
+                    print(f"[{WORKER_ID}] WARNING: Received start before previous end for bovine {bovine_id}. Clearing batch.")
+                    state["data"] = []
+                    state["data_count"] = 0
+                state["is_started"] = True
+                state["data"] = []
+                state["data_count"] = 0
+                state["start_at"] = message["timestamp"]
+                print(f"[{WORKER_ID}] Start received for bovine {bovine_id}")
 
             elif msg_type == "data":
-               
-                if mic_state["start"] is not None and not mic_state["ended"]:
-                    # mic_state["chunks"].extend(message.get("data", []))
-                    mic_state["chunks"].append(message.get("data", ""))
-                    # with open("mic_chunks_debug.txt", "a") as f:
-                    #     f.write(f"{mic_state['chunks']}\n")
-                    logging.debug(f"[{WORKER_ID}] Received data chunk for {bovine_id}. Total: {len(mic_state['chunks'])}")
-                else:
-                    logging.warning(f"[{WORKER_ID}] Data received without start or after end for {bovine_id}. Ignored.")
+                if not state["is_started"]:
+                    print(f"[{WORKER_ID}] WARNING: Data received before start for bovine {bovine_id}. Ignoring.")
+                    return
+                state["data"].append(message['data'])
+                print(f"[{WORKER_ID}] Data received for bovine {bovine_id}. Total data count: {state['data_count'] + 1}")
+                state["data_count"] += 1
+                if state["data_count"] > 220:
+                    print(f"[{WORKER_ID}] WARNING: More than 220 data messages for bovine {bovine_id}. Clearing batch.")
+                    state["is_started"] = False
+                    state["data"] = []
+                    state["data_count"] = 0
 
             elif msg_type == "end":
-                if mic_state["start"] is not None and not mic_state["ended"]:
-                    mic_state["ended"] = True
-                    
-                    if len(mic_state["chunks"]) == 220:
-                        mic_message = {
-                            "bovine_id": bovine_id,
-                            "audio_raw": mic_state["chunks"],
-                            "probability": 0.9,
-                            "timestamp": mic_state["start"]["timestamp"],
-                            "topic": topic
-                        }
-                        logging.info(f"[{WORKER_ID}] Finalizing valid batch for {bovine_id} with 220 chunks.")
-                        # run_inference_and_publish([mic_message])
-                        q = queue_manager.get_or_create_queue(topic, bovine_id)
-                        q.put(mic_message)
-                    else:
-                        logging.warning(f"[{WORKER_ID}] Invalid batch for {bovine_id}: expected 220 chunks, got {len(mic_state['chunks'])}")
-                    mic_state = {"start": None, "chunks": [], "ended": False}
+                if not state["is_started"]:
+                    print(f"[{WORKER_ID}] WARNING: End received before start for bovine {bovine_id}. Ignoring.")
+                    return
+                if state["data_count"] == 220:
+                    # Valid batch, queue for processing
+                    batch = {
+                        "topic": topic,
+                        "bovine_id": bovine_id,
+                        "batch_size": state["data_count"],
+                        "timestamp": state["start_at"],
+                        "data": state["data"]
+                    }
+                    q = queue_manager.get_or_create_queue(topic, bovine_id)
+                    q.put(batch)
+                    print(f"[{WORKER_ID}] Valid batch queued for bovine {bovine_id}")
+                else:
+                    print(f"[{WORKER_ID}] WARNING: Invalid batch for bovine {bovine_id}: expected 220 data, got {state['data_count']}. Clearing batch.")
+                # Reset state
+                state["is_started"] = False
+                state["data"] = []
+                state["data_count"] = 0
 
-            queue_manager.mic_batches[bovine_id] = mic_state
+            else:
+                print(f"[{WORKER_ID}] WARNING: Unknown message type '{msg_type}' for bovine {bovine_id}")
 
+        # Handle other topics as before...
         elif topic in [MQTT_TOPIC_ACC, MQTT_TOPIC_CAMERA]:
+            bovine_id = message.get("bovine_id")
+            if bovine_id is None:
+                print(f"[{WORKER_ID}] Error: Message missing bovine_id field")
+                return
+            
+            batch_message = {
+            "topic": topic,
+            "bovine_id": bovine_id,
+            "batch_size": len(message),
+            "timestamp": time.time(),
+            "data": message
+          }
             q = queue_manager.get_or_create_queue(topic, bovine_id)
-            q.put(message)
-            logging.debug(f"[{WORKER_ID}] Queued {topic} message for bovine {bovine_id}")
+            q.put(batch_message)
+            print(f"[{WORKER_ID}] Queued message from {topic} for bovine {bovine_id}")
+
+        else:
+            print(f"[{WORKER_ID}] Error: Unknown topic {topic}")
 
     except json.JSONDecodeError:
-        logging.error(f"[{WORKER_ID}] Invalid JSON message")
+        print(f"[{WORKER_ID}] Error: Invalid JSON message")
     except Exception as e:
-        logging.error(f"[{WORKER_ID}] Error processing message: {str(e)}")
+        print(f"[{WORKER_ID}] Error processing message: {str(e)}")
 
 def mqtt_subscribe():
     client = mqtt.Client()
