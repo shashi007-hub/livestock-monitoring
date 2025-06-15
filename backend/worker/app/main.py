@@ -193,15 +193,8 @@ def on_message(client, userdata, msg):
                 print(f"[{WORKER_ID}] Error: Message missing bovine_id field")
                 return
             
-            batch_message = {
-            "topic": topic,
-            "bovine_id": bovine_id,
-            "batch_size": len(message),
-            "timestamp": time.time(),
-            "data": message
-          }
             q = queue_manager.get_or_create_queue(topic, bovine_id)
-            q.put(batch_message)
+            q.put(message)
             print(f"[{WORKER_ID}] Queued message from {topic} for bovine {bovine_id}")
 
         else:

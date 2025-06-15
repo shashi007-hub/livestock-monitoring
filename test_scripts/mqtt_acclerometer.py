@@ -65,10 +65,11 @@ if __name__ == "__main__":
     # Create JSON records
     json_records = create_json_records(data, bovine_id)
     count = 0
+    print(f"Total records to publish: {len(json_records)}")
     # Publish each JSON record
     for record in json_records:
-        if count == 20:
-            break
+        
         count += 1
         publish_message(broker, port, topic, record)
-        time.sleep(1)  # Mimic real-time data publishing
+        if count % 500 == 0:
+            time.sleep(1)

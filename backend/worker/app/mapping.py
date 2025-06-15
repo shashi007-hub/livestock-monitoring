@@ -338,7 +338,7 @@ def camera_pipeline(batch_data):
     print("Camera pipeline triggered ✅", flush=True)
 
     try:
-        print('total messages',len(messages), flush=True)
+        
         for messages in batch_data['data']:
             try:
                 # Process each message in the batch
