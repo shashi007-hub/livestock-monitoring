@@ -97,7 +97,7 @@ def ExtractFeaturesFromJSON(json_input):
         # Convert   accelerometer data to a DataFrame
         df = pd.DataFrame(accelerometer_data)
         df = df.dropna()
-
+        print("columns in df", df.columns)
         features = ['Acceleration_x', 'Acceleration_y', 'Acceleration_z',
                     'Gravity_x', 'Gravity_y', 'Gravity_z',
                     'Rotation_x', 'Rotation_y', 'Rotation_z',
@@ -164,7 +164,6 @@ def predict_lameness(data):
             for i in range(len(FEdata)):
                 pred = loaded_model.predict(FEdata.iloc[[i]])
                 predictions.append(pred[0])
-                print(f"Prediction for sample {i}: {pred[0]}")
         except Exception as e:
             print(f"Error during model prediction: {e}")
             return None

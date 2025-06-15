@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
 import os
 import time
+import logging
 from threading import Lock
 import queue
 import json
@@ -12,19 +13,22 @@ import paho.mqtt.client as mqtt
 from app.distributed_worker import DistributedWorker
 from app.database.db import init_db
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] %(message)s')
+
 MQTT_BROKER = os.getenv("MQTT_BROKER", "mosquitto")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_TOPIC_MIC = os.getenv("MQTT_TOPIC_MIC", "inference/microphone")
 MQTT_TOPIC_ACC= os.getenv("MQTT_TOPIC_ACC", "inference/accelerometer")
 MQTT_TOPIC_CAMERA = os.getenv("MQTT_TOPIC_CAMERA", "inference/camera")
-IS_DISTRIBUTED = False  # Set to True for distributed mode, False for local mode
+IS_DISTRIBUTED = False
 
-# Define threshold for batch processing
-# BATCH_THRESHOLD = 3  # Process messages when queue reaches this size for a specific bovine
-BATCH_TIMEOUT = 200  # Seconds to wait before processing incomplete batch
+BATCH_TIMEOUT = 500
+# mic_request_count = 0
+mic_batch_state = {}  # {bovine_id: {"is_started": False, "data_count": 0}}
 
 BATCH_THRESHOLDS = {
-    "inference/microphone": 3,
+    "inference/microphone": 1,  
     "inference/accelerometer": 20,
     "inference/camera": 1
 }
@@ -32,37 +36,32 @@ BATCH_THRESHOLDS = {
 WORKER_ID = str(uuid.uuid4())
 
 class ThreadSafeQueueManager:
-    """Thread-safe queue manager for handling messages by topic and bovine_id"""
     def __init__(self):
-        self.queues = {}  # {(topic, bovine_id): Queue()}
+        self.queues = {}
         self.lock = Lock()
-        self.last_process_times = {}  # {(topic, bovine_id): timestamp}
-        
+        self.last_process_times = {}
+        self.mic_batches = {}  # {(bovine_id): {"start": msg, "chunks": [], "ended": False}}
+
     def get_or_create_queue(self, topic, bovine_id):
-        """Thread-safe method to get or create a queue for a topic-bovine pair"""
         key = (topic, bovine_id)
         with self.lock:
             if key not in self.queues:
                 self.queues[key] = queue.Queue()
                 self.last_process_times[key] = time.time()
             return self.queues[key]
-            
+
     def get_last_process_time(self, topic, bovine_id):
-        """Thread-safe method to get last process time"""
         with self.lock:
             return self.last_process_times.get((topic, bovine_id), time.time())
-            
+
     def update_last_process_time(self, topic, bovine_id):
-        """Thread-safe method to update last process time"""
         with self.lock:
             self.last_process_times[(topic, bovine_id)] = time.time()
-            
+
     def get_all_queues(self):
-        """Thread-safe method to get all queues"""
         with self.lock:
             return list(self.queues.items())
 
-# Global queue manager instance
 queue_manager = ThreadSafeQueueManager()
 
 def   run_inference_and_publish(messages):
@@ -110,62 +109,114 @@ def   run_inference_and_publish(messages):
         print(f"[{WORKER_ID}] Processed batch of {len(messages)} messages for bovine {bovine_id} on topic {topic}")
     
     return result
-    
 
 def on_message(client, userdata, msg):
-    """
-    Callback Function: Runs in the MQTT client's thread.
-    This is separate from the main thread and process workers.
-    """
     try:
         message = json.loads(msg.payload.decode())
-        if "bovine_id" not in message:
-            print(f"[{WORKER_ID}] Error: Message missing bovine_id field")
-            return
+        topic = msg.topic
+        message["topic"] = topic
+
+        if topic == MQTT_TOPIC_MIC:
+            bovine_id = message.get("bovine_id")
+            msg_type = message.get("type")
+
+            if bovine_id is None:
+                print(f"[{WORKER_ID}] Error: Message missing bovine_id field")
+                return
+
+            # Initialize state if not present
+            if bovine_id not in mic_batch_state:
+                mic_batch_state[bovine_id] = {"is_started": False, "data_count": 0, "data": [],"start_at": None}
+
+            state = mic_batch_state[bovine_id]
+
+            if msg_type == "start":
+                if "chunks" not in message or message["chunks"] != 220:
+                    print(f"[{WORKER_ID}] WARNING: Start message for bovine {bovine_id} missing or invalid 'chunks'. Discarding batch.")
+                    state["is_started"] = False
+                    state["data"] = []
+                    state["data_count"] = 0
+                    return
+                if state["is_started"]:
+                    print(f"[{WORKER_ID}] WARNING: Received start before previous end for bovine {bovine_id}. Clearing batch.")
+                    state["data"] = []
+                    state["data_count"] = 0
+                state["is_started"] = True
+                state["data"] = []
+                state["data_count"] = 0
+                state["start_at"] = message["timestamp"]
+                print(f"[{WORKER_ID}] Start received for bovine {bovine_id}")
+
+            elif msg_type == "data":
+                if not state["is_started"]:
+                    print(f"[{WORKER_ID}] WARNING: Data received before start for bovine {bovine_id}. Ignoring.")
+                    return
+                state["data"].append(message['data'])
+                print(f"[{WORKER_ID}] Data received for bovine {bovine_id}. Total data count: {state['data_count'] + 1}")
+                state["data_count"] += 1
+                if state["data_count"] > 220:
+                    print(f"[{WORKER_ID}] WARNING: More than 220 data messages for bovine {bovine_id}. Clearing batch.")
+                    state["is_started"] = False
+                    state["data"] = []
+                    state["data_count"] = 0
+
+            elif msg_type == "end":
+                if not state["is_started"]:
+                    print(f"[{WORKER_ID}] WARNING: End received before start for bovine {bovine_id}. Ignoring.")
+                    return
+                if state["data_count"] == 220:
+                    # Valid batch, queue for processing
+                    batch = {
+                        "topic": topic,
+                        "bovine_id": bovine_id,
+                        "batch_size": state["data_count"],
+                        "timestamp": state["start_at"],
+                        "data": state["data"]
+                    }
+                    q = queue_manager.get_or_create_queue(topic, bovine_id)
+                    q.put(batch)
+                    print(f"[{WORKER_ID}] Valid batch queued for bovine {bovine_id}")
+                else:
+                    print(f"[{WORKER_ID}] WARNING: Invalid batch for bovine {bovine_id}: expected 220 data, got {state['data_count']}. Clearing batch.")
+                # Reset state
+                state["is_started"] = False
+                state["data"] = []
+                state["data_count"] = 0
+
+            else:
+                print(f"[{WORKER_ID}] WARNING: Unknown message type '{msg_type}' for bovine {bovine_id}")
+
+        # Handle other topics as before...
+        elif topic in [MQTT_TOPIC_ACC, MQTT_TOPIC_CAMERA]:
+            bovine_id = message.get("bovine_id")
+            if bovine_id is None:
+                print(f"[{WORKER_ID}] Error: Message missing bovine_id field")
+                return
             
-        message["topic"] = msg.topic  # Add topic to message for processing
-        bovine_id = message["bovine_id"]
-        
-        if msg.topic not in [MQTT_TOPIC_MIC, MQTT_TOPIC_ACC, MQTT_TOPIC_CAMERA]:
-            print(f"[{WORKER_ID}] Error: Unknown topic {msg.topic}")
-            return
-            
-        # Get or create queue in thread-safe manner
-        q = queue_manager.get_or_create_queue(msg.topic, bovine_id)
-        q.put(message)
-        print(f"[{WORKER_ID}] Queued message from {msg.topic} for bovine {bovine_id}")
-        
+            q = queue_manager.get_or_create_queue(topic, bovine_id)
+            q.put(message)
+            print(f"[{WORKER_ID}] Queued message from {topic} for bovine {bovine_id}")
+
+        else:
+            print(f"[{WORKER_ID}] Error: Unknown topic {topic}")
+
     except json.JSONDecodeError:
         print(f"[{WORKER_ID}] Error: Invalid JSON message")
     except Exception as e:
         print(f"[{WORKER_ID}] Error processing message: {str(e)}")
 
 def mqtt_subscribe():
-    """
-    Creates MQTT client in the main thread, but client.loop_start()
-    creates a separate thread for MQTT operations
-    """
     client = mqtt.Client()
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT)
     client.subscribe([(MQTT_TOPIC_MIC, 0), (MQTT_TOPIC_ACC, 0), (MQTT_TOPIC_CAMERA, 0)])
     client.loop_start()
     return client
-    
 
 def main():
-    """
-    Main Process: Initializes components and manages the main processing loop
-    - MQTT client runs in a separate thread (created by client.loop_start())
-    - ProcessPoolExecutor creates separate processes for inference
-    - Main loop runs in the main thread
-    """
-    print(f"[{WORKER_ID}] Starting MQTT worker (distributed={IS_DISTRIBUTED})")
-    
-    # Initialize the database
-    print(f"[{WORKER_ID}] Initializing database...")
+    logging.info(f"[{WORKER_ID}] Starting MQTT worker (distributed={IS_DISTRIBUTED})")
     init_db()
-    
+
     if IS_DISTRIBUTED:
         worker = DistributedWorker()
         worker.start()
@@ -174,38 +225,34 @@ def main():
         with ProcessPoolExecutor(max_workers=3) as executor:
             while True:
                 try:
-                    # Iterate through all queues in a thread-safe manner
                     for (topic, bovine_id), q in queue_manager.get_all_queues():
                         curr_time = time.time()
                         last_process_time = queue_manager.get_last_process_time(topic, bovine_id)
-                        
+
                         should_process = (
-                            not q.empty() and 
+                            not q.empty() and
                             (q.qsize() >= BATCH_THRESHOLDS[topic] or 
-                            curr_time - last_process_time >= BATCH_TIMEOUT)
+                             curr_time - last_process_time >= BATCH_TIMEOUT)
                         )
-                        
+
                         if should_process:
-                            print(f"[{WORKER_ID}] Processing messages from topic: {topic}, bovine_id: {bovine_id}")
-                            print(f"[{WORKER_ID}] Queue size: {q.qsize()}, Time since last process: {curr_time - last_process_time:.2f}s")
-                            messages = [] # (particular sensor for a particular cow)
+                            logging.info(f"[{WORKER_ID}] Triggering batch process for topic {topic}, bovine {bovine_id}")
+                            messages = []
                             try:
-                                while len(messages) < BATCH_THRESHOLDS[topic] and not q.empty():
+                                while not q.empty():
                                     message = q.get_nowait()
                                     messages.append(message)
                                     q.task_done()
                             except queue.Empty:
                                 pass
-                            future = executor.submit(run_inference_and_publish, messages)
-                            queue_manager.update_last_process_time(topic, bovine_id)
-                                
-                except Exception as e:
-                    print(f"[{WORKER_ID}] Error in main loop: {str(e)}")
-                    continue
 
-                time.sleep(1)  # Prevent busy-waiting
+                            executor.submit(run_inference_and_publish, messages)
+                            queue_manager.update_last_process_time(topic, bovine_id)
+
+                except Exception as e:
+                    logging.error(f"[{WORKER_ID}] Main loop error: {str(e)}")
+
+                time.sleep(1)
 
 if __name__ == "__main__":
     main()
-
-

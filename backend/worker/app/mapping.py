@@ -17,14 +17,40 @@ class Predictions(Enum):
     HFC = "HFC"
     LFC = "LFC"
 
+# def scale_melspec(mel_spec):
+#     target_size = (90, 200)
+#     norm_spec = librosa.util.normalize(mel_spec)
+#     norm_spec = (norm_spec * 255).astype(np.uint8)
+#     img = Image.fromarray(norm_spec)
+#     img = img.resize(target_size, Image.Resampling.LANCZOS)
+#     img_array = np.array(img)
+#     return img_array
+
+import librosa
+
 def scale_melspec(mel_spec):
     target_size = (90, 200)
-    norm_spec = librosa.util.normalize(mel_spec)
-    norm_spec = (norm_spec * 255).astype(np.uint8)
-    img = Image.fromarray(norm_spec)
+    
+    # Log-scale and clip the values
+    mel_spec = librosa.util.normalize(mel_spec)
+    
+    # Clip to valid range [-1, 1]
+    mel_spec = np.clip(mel_spec, -1, 1)
+
+    # Replace NaNs and infs
+    mel_spec = np.nan_to_num(mel_spec, nan=0.0, posinf=1.0, neginf=-1.0)
+
+    # Rescale to [0, 255]
+    mel_spec = ((mel_spec + 1) / 2) * 255
+    mel_spec = mel_spec.astype(np.uint8)
+
+    img = Image.fromarray(mel_spec)
     img = img.resize(target_size, Image.Resampling.LANCZOS)
     img_array = np.array(img)
+
     return img_array
+
+
 
     
 # def predict_from_wav(Model,WAV):
@@ -78,7 +104,7 @@ def predict_from_wav(ModelPath, WAV):
 
     pred_class = np.argmax(prediction)
     confidence = float(np.max(prediction))
-
+    print("Predicted class:", pred_class, "with confidence:", confidence)
     if pred_class == 1:
         return Predictions.HFC, confidence
         # return "HFC", confidence
@@ -98,14 +124,30 @@ def validate_batch(batch_data):
     return True, None
 
     # Helper functions
-def save_raw_to_wav(raw_data, output_wav_path, sample_rate=22050):
-    with wave.open(output_wav_path, 'wb') as wf:
-        wf.setnchannels(1)        # Mono
-        wf.setsampwidth(2)         # 16 bits = 2 bytes
-        wf.setframerate(sample_rate)
-        if isinstance(raw_data, list):
-            raw_data = bytes(raw_data)
-        wf.writeframes(raw_data)
+# def save_raw_to_wav(raw_data, output_wav_path, sample_rate=22050):
+#     with wave.open(output_wav_path, 'wb') as wf:
+#         wf.setnchannels(1)        # Mono
+#         wf.setsampwidth(2)         # 16 bits = 2 bytes
+#         wf.setframerate(sample_rate)
+#         if isinstance(raw_data, list):
+#             raw_data = bytes(raw_data)
+#         wf.writeframes(raw_data)
+
+def save_raw_to_wav(raw_chunks, output_wav_path, sample_rate=22050):
+    try:
+        # Step 1: Join all chunks (strings) into one bytes object
+        raw_bytes = b''.join(chunk.encode('latin1') for chunk in raw_chunks)
+
+        # Step 2: Save as WAV
+        with wave.open(output_wav_path, 'wb') as wf:
+            wf.setnchannels(1)        # Mono
+            wf.setsampwidth(2)        # 16-bit PCM
+            wf.setframerate(sample_rate)
+            wf.writeframes(raw_bytes)
+
+        print(f"Saved raw audio to {output_wav_path}")
+    except Exception as e:
+        print(f"Error saving raw audio to {output_wav_path}: {e}", exc_info=True)
 
 
 def extract_mfcc(y, sr, n_mfcc=13, hop_length=256, n_fft=1024):
@@ -156,12 +198,14 @@ def microphone_pipeline(batch_data):
         # print("*****", batch_data['data'])
         for message in batch_data['data']:
             bovine_id = message['bovine_id']
+            print(f"Processing message for Bovine {bovine_id}", flush=True)
             timestamp = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")  # Assume ISO format
-
+            print(f"Timestamp for Bovine {bovine_id}: {timestamp}", flush=True)
             # Save raw audio to wav
             temp_wav_path = f"/tmp/{bovine_id}_{timestamp.timestamp()}.wav"
             print("Saving raw audio to wav:", temp_wav_path, flush=True)
-            save_raw_to_wav(message['audio_raw'], temp_wav_path)
+            print(message['data'], flush=True)
+            save_raw_to_wav(message['data'], temp_wav_path)
             print("Saved raw audio to wav:", temp_wav_path, flush=True)
 
             # Inference
@@ -208,7 +252,8 @@ def microphone_pipeline(batch_data):
                 bite_chew=label_idx
             )
             db.add(feeding_pattern)
-
+            print(f"Saved feeding pattern for Bovine {bovine_id} at {timestamp}: {label_idx}", flush=True)
+            print("processed audio data", flush=True)
         db.commit()
 
         return {"status": "success", "predictions": predictions}
@@ -293,7 +338,7 @@ def camera_pipeline(batch_data):
     print("Camera pipeline triggered ✅", flush=True)
 
     try:
-        print('total messages',len(messages), flush=True)
+        
         for messages in batch_data['data']:
             try:
                 # Process each message in the batch
