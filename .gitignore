@@ -141,3 +141,5 @@ cython_debug/
 *.raw
 *.wav
 tempCodeRunnerFile.py
+
+app.log.*
