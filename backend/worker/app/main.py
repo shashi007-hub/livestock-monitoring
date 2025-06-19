@@ -118,6 +118,9 @@ def   run_inference_and_publish(messages):
 def on_message(client, userdata, msg):
     try:
         message = json.loads(msg.payload.decode())
+        if not isinstance(message, dict):
+            logger.error(f"[{WORKER_ID}] Error: Decoded message is not a dictionary: {message}")
+            return
         topic = msg.topic
         message["topic"] = topic
 

@@ -23,38 +23,38 @@ class Predictions(Enum):
     HFC = "HFC"
     LFC = "LFC"
 
-# def scale_melspec(mel_spec):
-#     target_size = (90, 200)
-#     norm_spec = librosa.util.normalize(mel_spec)
-#     norm_spec = (norm_spec * 255).astype(np.uint8)
-#     img = Image.fromarray(norm_spec)
-#     img = img.resize(target_size, Image.Resampling.LANCZOS)
-#     img_array = np.array(img)
-#     return img_array
+def scale_melspec(mel_spec):
+    target_size = (90, 200)
+    norm_spec = librosa.util.normalize(mel_spec)
+    norm_spec = (norm_spec * 255).astype(np.uint8)
+    img = Image.fromarray(norm_spec)
+    img = img.resize(target_size, Image.Resampling.LANCZOS)
+    img_array = np.array(img)
+    return img_array
 
 import librosa
 
-def scale_melspec(mel_spec):
-    target_size = (90, 200)
+# def scale_melspec(mel_spec):
+#     target_size = (90, 200)
     
-    # Log-scale and clip the values
-    mel_spec = librosa.util.normalize(mel_spec)
+#     # Log-scale and clip the values
+#     mel_spec = librosa.util.normalize(mel_spec)
     
-    # Clip to valid range [-1, 1]
-    mel_spec = np.clip(mel_spec, -1, 1)
+#     # Clip to valid range [-1, 1]
+#     mel_spec = np.clip(mel_spec, -1, 1)
 
-    # Replace NaNs and infs
-    mel_spec = np.nan_to_num(mel_spec, nan=0.0, posinf=1.0, neginf=-1.0)
+#     # Replace NaNs and infs
+#     mel_spec = np.nan_to_num(mel_spec, nan=0.0, posinf=1.0, neginf=-1.0)
 
-    # Rescale to [0, 255]
-    mel_spec = ((mel_spec + 1) / 2) * 255
-    mel_spec = mel_spec.astype(np.uint8)
+#     # Rescale to [0, 255]
+#     mel_spec = ((mel_spec + 1) / 2) * 255
+#     mel_spec = mel_spec.astype(np.uint8)
 
-    img = Image.fromarray(mel_spec)
-    img = img.resize(target_size, Image.Resampling.LANCZOS)
-    img_array = np.array(img)
+#     img = Image.fromarray(mel_spec)
+#     img = img.resize(target_size, Image.Resampling.LANCZOS)
+#     img_array = np.array(img)
 
-    return img_array
+#     return img_array
 
 
 
@@ -80,7 +80,7 @@ def scale_melspec(mel_spec):
 
 #     pred_class = np.argmax(prediction)
 #     confidence = float(np.max(prediction))
-
+#     print("Predicted class:", pred_class, "with confidence:", confidence)
 #     if pred_class == 1:
 #         return Predictions.HFC, confidence
 #     elif pred_class == 0:
@@ -262,7 +262,7 @@ def microphone_pipeline(batch_data):
                 db.add(sms_alert)
 
             # Cleanup
-            os.remove(temp_wav_path)
+            # os.remove(temp_wav_path)
             logger.info("Removed temporary wav file: %s", temp_wav_path)
 
             feeding_pattern = FeedingPatterns(
