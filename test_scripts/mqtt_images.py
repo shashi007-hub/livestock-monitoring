@@ -61,7 +61,7 @@ if __name__ == "__main__":
     topics = ["inference/camera"]  # Replace with your desired topic
     import random
      # Replace with the path to your .wav file
-    image_path = r"/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/cows with lumpy skin disease_1.png" 
+    image_path = r"/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/cowbaarn_sora1.png" 
      # Replace with your image path
     base64_string = encode_image_to_base64(image_path)
     message = None
@@ -74,5 +74,6 @@ if __name__ == "__main__":
     else:
         print("Failed to encode image. Exiting.")   
     for i in range(1):
+        time.sleep(1)
         publish_message(broker, port, random.choice(topics), message)
         time.sleep(1)
