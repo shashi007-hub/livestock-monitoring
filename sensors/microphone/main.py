@@ -9,7 +9,7 @@ from led import set_color,on_error
 
 # Fixed metadata
 BOVINE_ID = "2"
-MQTT_BROKER = "192.168.0.101"
+MQTT_BROKER = "192.168.0.3"
 MQTT_PORT = 1883
 MQTT_TOPIC = b"inference/microphone"
 

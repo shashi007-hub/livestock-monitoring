@@ -163,10 +163,11 @@ def save_raw_to_wav(raw_chunks, output_wav_path, sample_rate=22050):
 
     import base64
     try:
-        raw_bytes = map(lambda chunk: base64.b64decode(chunk), raw_chunks)
-        # Step 1: Join all chunks (strings) into one bytes object
-        # raw_bytes = b''.join(chunk.encode('latin1') for chunk in raw_chunks)
-        raw_bytes = b''.join(raw_bytes)
+        # raw_bytes = map(lambda chunk: base64.b64decode(chunk), raw_chunks)
+        # # Step 1: Join all chunks (strings) into one bytes object
+        # # raw_bytes = b''.join(chunk.encode('latin1') for chunk in raw_chunks)
+        # raw_bytes = b''.join(raw_bytes)
+        raw_bytes = raw_chunks
 
         # Step 2: Save as WAV
         with wave.open(output_wav_path, 'wb') as wf:
@@ -215,7 +216,9 @@ def microphone_pipeline(batch_data):
     and save results to the database.
     """
 
-    onnx_model_path = "../app/models/xgb_model.onnx"
+    # onnx_model_path = "app/models/xgb_model.onnx"
+    onnx_model_path = os.getenv("BITE_CHEW_MODEL_PATH")
+    logger.info(f"Using ONNX model at: {onnx_model_path}")
     # Constants
     LABELS = {0: "chew", 1: "bite", 2: "chew-bite"}
 
@@ -255,7 +258,7 @@ def microphone_pipeline(batch_data):
             logger.info(f"Predicted label for Bovine {bovine_id} at {timestamp}: {label}")
 
             # Inference with Keras model (HFC / LFC)
-            distress_model = "../app/models/cow_model.onnx"
+            distress_model = os.getenv("DISTRESS_MODEL_PATH")
             frequency_class, probability = predict_from_wav(distress_model,temp_wav_path)
             logger.info(f"Distress model prediction for Bovine {bovine_id} at {timestamp}: {frequency_class}, Probability: {probability}")
             if frequency_class == Predictions.HFC: # or frequency_class  Predictions.LFC:

@@ -8,7 +8,8 @@ import paho.mqtt.client as  mqtt
 
 # Configs
 BOVINE_ID = "4"
-MQTT_BROKER = "192.168.101.148"
+# MQTT_BROKER = "192.168.101.148"
+MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
 MQTT_TOPIC = b"inference/microphone"
 WAV_FILE_PATH = "/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/bite1.wav"  # Must be mono, 16-bit, 22500Hz

@@ -7,8 +7,8 @@ from machine import Pin, PWM
 from time import sleep
 from led import set_color,on_error
 
-SSID = "wsww"
-PASSWORD = "swswsw!*"
+SSID = "D-Link_DIR-600M"
+PASSWORD = "Amardpmmss"
 
 def wifi_connect(ssid, password, max_retries=3):
     wlan = network.WLAN(network.STA_IF)

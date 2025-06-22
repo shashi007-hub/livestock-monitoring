@@ -1,6 +1,10 @@
 import numpy as np
 import cv2
 import base64
+from app.logging_service import MultiprocessLogger
+
+logger = MultiprocessLogger.get_logger(__name__)
+
 def decode_base64_image(base64_string):
     """Decodes a base64 encoded image string into a NumPy array.
 
@@ -26,7 +30,7 @@ def decode_base64_image(base64_string):
 
         return image
     except Exception as e:
-        print(f"Error decoding base64 image: {e}")
+        logger.error(f"Error decoding base64 image: {e}")
         return None
     
 def filter_Detections(results, thresh = 0.5):
@@ -131,5 +135,5 @@ def rescale_back(results,img_w,img_h):
 
     boxes = np.column_stack((x1, y1, x2, y2, class_id))
     keep, keep_confidences = NMS(boxes,confidence)
-    print(np.array(keep).shape)
-    return keep, keep_confidences    
+    logger.info(f"Detections after NMS: {np.array(keep).shape}")
+    return keep, keep_confidences

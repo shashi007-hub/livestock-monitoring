@@ -11,6 +11,7 @@ import paho.mqtt.client as mqtt
 from app.distributed_worker import DistributedWorker
 from app.database.db import init_db
 from threading import Lock
+import base64
 
 # Add parent directory to sys.path
 import sys
@@ -134,20 +135,21 @@ def on_message(client, userdata, msg):
 
             # Initialize state if not present
             if bovine_id not in mic_batch_state:
-                mic_batch_state[bovine_id] = {"is_started": False, "data_count": 0, "data": [],"start_at": None}
+                mic_batch_state[bovine_id] = {"is_started": False, "data_count": 0, "data": [],"start_at": None,"chunk_size":0}
 
             state = mic_batch_state[bovine_id]
 
             if msg_type == "start":
                 if "chunks" in message:
-                    global CHUNK_SIZE
-                    CHUNK_SIZE = message["chunks"]
-                    logger.info(f"[{WORKER_ID}] CHUNK_SIZE set to {CHUNK_SIZE} for bovine {bovine_id}")
+                    state["chunk_size"] =  message["chunks"]
+                    chunk = state["chunk_size"] 
+                    logger.info(f"[{WORKER_ID}] CHUNK_SIZE set to {chunk } for bovine {bovine_id}")
                 else:
                     logger.warning(f"[{WORKER_ID}] WARNING: Start message for bovine {bovine_id} missing or invalid 'chunks'. Discarding batch.")
                     state["is_started"] = False
                     state["data"] = []
                     state["data_count"] = 0
+                    state["chunk_size"]=0
                     return
                 if state["is_started"]:
                     logger.warning(f"[{WORKER_ID}] WARNING: Received start before previous end for bovine {bovine_id}. Clearing batch.")
@@ -167,7 +169,7 @@ def on_message(client, userdata, msg):
                 state["data"].append({"index": message["index"], "data": message["data"]})
                 logger.info(f"[{WORKER_ID}] Data received for bovine {bovine_id}. Total data count: {state['data_count'] + 1}")
                 state["data_count"] += 1
-                if state["data_count"] > CHUNK_SIZE:
+                if state["data_count"] > state["chunk_size"] :
                     logger.warning(f"[{WORKER_ID}] WARNING: More than chunk_size data messages for bovine {bovine_id}. Clearing batch.")
                     state["is_started"] = False
                     state["data"] = []
@@ -177,15 +179,18 @@ def on_message(client, userdata, msg):
                 if not state["is_started"]:
                     logger.warning(f"[{WORKER_ID}] WARNING: End received before start for bovine {bovine_id}. Ignoring.")
                     return
-                if state["data_count"] == CHUNK_SIZE:
-                    # Sort by index and extract only the data values
-                    sorted_data = [item["data"] for item in sorted(state["data"], key=lambda x: x["index"])]
+                if state["data_count"] == state["chunk_size"] :
+                    logger.info(f"[{WORKER_ID}] End received for bovine {bovine_id}. Preparing to queue batch.")
+                    joined_audio = b''.join(
+                        base64.b64decode(item["data"]) for item in sorted(state["data"], key=lambda x: x["index"])
+                    )
+                    # print("item _data", state["data")
                     batch = {
                         "topic": topic,
                         "bovine_id": bovine_id,
                         "batch_size": state["data_count"],
                         "timestamp": state["start_at"],
-                        "data": sorted_data
+                        "data": joined_audio
                     }
                     q = queue_manager.get_or_create_queue(topic, bovine_id)
                     q.put(batch)
