@@ -103,7 +103,7 @@ def ExtractFeaturesFromJSON(json_input):
         # Convert   accelerometer data to a DataFrame
         df = pd.DataFrame(accelerometer_data)
         df = df.dropna()
-        logger.info("columns in df", df.columns)
+        # logger.info("columns in df", df.columns)
         features = ['Acceleration_x', 'Acceleration_y', 'Acceleration_z',
                     'Gravity_x', 'Gravity_y', 'Gravity_z',
                     'Rotation_x', 'Rotation_y', 'Rotation_z',
@@ -146,6 +146,33 @@ def ExtractFeaturesFromJSON(json_input):
         return None
 
 
+def count_steps_from_accelerometer(data):
+    """Count steps from accelerometer data with error handling and logging."""
+    try:
+        import scipy.signal as signal
+        if 'acclerometer_data' not in data:
+            logger.error("No 'acclerometer_data' found for step counting.")
+            return None
+        df = pd.DataFrame(data['acclerometer_data'])
+        required_cols = ['Acceleration_x', 'Acceleration_y', 'Acceleration_z']
+        if not all(col in df.columns for col in required_cols):
+            logger.error("Missing acceleration columns for step counting.")
+            return None
+        df['acc_magnitude'] = np.sqrt(df['Acceleration_x']**2 + df['Acceleration_y']**2 + df['Acceleration_z']**2)
+        if len(df['acc_magnitude']) < 5:
+            logger.error("Not enough data points for smoothing and peak detection.")
+            return None
+        df['acc_magnitude_smooth'] = signal.savgol_filter(df['acc_magnitude'], window_length=5, polyorder=2)
+        peaks, _ = signal.find_peaks(df['acc_magnitude_smooth'], height=0.01, distance=10)
+        number_of_steps = len(peaks)
+        # number_of_steps =  10
+        logger.info(f"Estimated Number of Steps: {number_of_steps}")
+        return number_of_steps
+    except Exception as e:
+        logger.error(f"Error during step counting: {e}")
+        return None
+
+
 def predict_lameness(data):
     logger.info("predict_lameness called")
     try:
@@ -155,7 +182,7 @@ def predict_lameness(data):
             logger.error("Feature extraction failed.")
             return None
         
-        logger.info("after FEdata", FEdata.head())
+        # logger.info("after FEdata", FEdata.head())
         predictions = []
 
         model_path = os.getenv("LAMNESS_MODEL_PATH")
@@ -178,8 +205,11 @@ def predict_lameness(data):
         logger.info(f"Mean prediction: {mean_prediction}")
         prediction = math.ceil(mean_prediction)
         logger.info(f"Final prediction (rounded): {prediction}")
-        
-        return prediction
+
+        # Use the new step counting function
+        number_of_steps = count_steps_from_accelerometer(data)
+
+        return {"prediction": prediction, "steps": number_of_steps}
     except Exception as e:
         logger.error(f"Error in predict_lameness: {e}")
         return None

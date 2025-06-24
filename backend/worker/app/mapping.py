@@ -8,9 +8,9 @@ import numpy as np
 import os
 import wave
 import onnxruntime as ort
-from datetime import datetime, timedelta
+from datetime import datetime
 from app.database.db import db_session
-from app.database.models import DistressCall, FeedingPatterns, FeedingAnalytics, SMSAlerts,LamenessInference,SkinDiseases
+from app.database.models import DistressCall, FeedingPatterns, SMSAlerts
 from app.alerts import send_sms_alert
 import sys
 import os
@@ -211,6 +211,8 @@ def run_inference(onnx_model_path, audio_path):
 
 
 def microphone_pipeline(batch_data):
+    from app.alerts import _get_bovin_name_from_db
+
     """
     Process a batch of audio data from the microphone, run inference using ONNX model,
     and save results to the database.
@@ -267,7 +269,9 @@ def microphone_pipeline(batch_data):
                     timestamp=timestamp,
                     probability=probability  # You can decide what value to store
                 )
-                send_sms_alert(f"ALERT! DISTRESS CALL from Bovine {bovine_id}!", bovine_id)
+                bovine_name = _get_bovin_name_from_db(bovine_id)
+                distress_message = f"Alert: Your animal, {bovine_name}, is showing signs of distress. Please check on it as soon as possible."
+                send_sms_alert(distress_message, bovine_id)
             
                 db.add(distress_call)
 
@@ -275,7 +279,7 @@ def microphone_pipeline(batch_data):
                     user_id=1,
                     bovine_id=bovine_id,
                     timestamp=timestamp,
-                    message=f"ALERT! DISTRESS CALL from Bovine {bovine_id}!"
+                    message=distress_message
                 )
 
                 db.add(sms_alert)
@@ -306,7 +310,8 @@ def microphone_pipeline(batch_data):
 def accelerometer_pipeline(batch_data):
     from app.process_lamness.preprocess_lamness import predict_lameness
     from app.alerts import _get_bovin_name_from_db
-
+    from app.database.models import LamenessInference,Bovine
+    
     logger.info("Accelerometer pipeline triggered ✅")
     
     try:
@@ -330,30 +335,50 @@ def accelerometer_pipeline(batch_data):
         try:
             # print("Calling predict_lameness with data:", combined_data, flush=True)
             results = predict_lameness(combined_data)
-            if results >= 3:
-                lameness_inference = LamenessInference(
-                    bovine_id=bovine_id,
-                    metric=results,
-                    timestamp=timestamp
-                )
-                db_session.add(lameness_inference)
-                db_session.commit()
-                bovine_name = _get_bovin_name_from_db(bovine_id)
-                message = "Alert: Your animal, {}, is showing signs of lameness. Please check on them as soon as possible.".format(bovine_name)
-                send_sms_alert(message, bovine_id)
+            if results is not None and isinstance(results, dict):
+                prediction = results.get("prediction")
+                steps = results.get("steps")
+                logger.info(f"Lameness prediction: {prediction}, Steps counted: {steps}")
 
-                sms_alert = SMSAlerts(
-                user_id=1,
-                bovine_id=bovine_id,
-                timestamp=timestamp,
-                message=message
-            )
-                logger.info(sms_alert)
-                db_session.add(sms_alert)
-                db_session.commit()
-            else:   
-                logger.info(f"Lameness prediction for Bovine {bovine_id} is below threshold: {results}")
-            logger.info(f"Predicted lameness for Bovine {bovine_id} at {timestamp}: {results}")
+                # # Update Bovine table with number of steps
+                # try:
+                #     from app.database.models import Bovine
+                #     bovine = db_session.query(Bovine).filter_by(bovine_id=bovine_id).first()
+                #     if bovine is not None and steps is not None:
+                #         bovine.steps = steps  # Assumes 'steps' field exists in Bovine model
+                #         db_session.commit()
+                #         logger.info(f"Updated Bovine {bovine_id} with steps: {steps}")
+                #     else:
+                #         logger.warning(f"Could not update steps for Bovine {bovine_id}: bovine or steps missing.")
+                # except Exception as e:
+                #     logger.error(f"Error updating steps in Bovine table: {e}", exc_info=True)
+
+                if prediction is not None and prediction >= 3:
+                    lameness_inference = LamenessInference(
+                        bovine_id=bovine_id,
+                        metric=prediction,
+                        timestamp=timestamp
+                    )
+                    db_session.add(lameness_inference)
+                    db_session.commit()
+                    bovine_name = _get_bovin_name_from_db(bovine_id)
+                    message = "Alert: Your animal, {}, is showing signs of lameness. Please check on them as soon as possible.".format(bovine_name)
+                    send_sms_alert(message, bovine_id)
+
+                    sms_alert = SMSAlerts(
+                        user_id=1,
+                        bovine_id=bovine_id,
+                        timestamp=timestamp,
+                        message=message
+                    )
+                    logger.info(sms_alert)
+                    db_session.add(sms_alert)
+                    db_session.commit()
+                else:
+                    logger.info(f"Lameness prediction for Bovine {bovine_id} is below threshold: {prediction}")
+                logger.info(f"Predicted lameness for Bovine {bovine_id} at {timestamp}: {prediction}, Steps: {steps}")
+            else:
+                logger.error(f"Invalid results from predict_lameness: {results}")
         except Exception as e:
             logger.error(f"Error in predict_lameness: {e}", exc_info=True)
 

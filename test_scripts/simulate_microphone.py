@@ -12,7 +12,7 @@ BOVINE_ID = "4"
 MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
 MQTT_TOPIC = b"inference/microphone"
-WAV_FILE_PATH = "/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/bite1.wav"  # Must be mono, 16-bit, 22500Hz
+WAV_FILE_PATH = "/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/HFC1.wav"  # Must be mono, 16-bit, 22500Hz
 idx = None
 # Audio chunking config
 CHUNK_SIZE = 1024
