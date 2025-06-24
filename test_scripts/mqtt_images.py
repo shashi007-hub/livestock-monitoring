@@ -56,7 +56,7 @@ def publish_message(broker, port, topic, message):
 
 if __name__ == "__main__":
     # Example usage
-    broker = "localhost"  # Replace with your broker
+    broker = "164.52.194.74"  # Replace with your broker
     port = 1883  # Replace with your MQTT port
     topics = ["inference/camera"]  # Replace with your desired topic
     import random

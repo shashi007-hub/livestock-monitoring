@@ -53,7 +53,7 @@ def publish_message(broker, port, topic, message):
 
 if __name__ == "__main__":
     # Configuration
-    broker = "localhost"  # Replace with your broker
+    broker = "164.52.194.74"  # Replace with your broker
     port = 1883  # Replace with your MQTT port
     topic = "inference/accelerometer"  # Replace with your desired topic
     csv_file_path = "test_scripts/Illnessdegree_5_Leg_frontright_Acquisitiondata_17_05_2022_Acquisitiontime_08_29_02.csv"  # Replace with your CSV file path

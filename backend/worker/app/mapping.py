@@ -16,6 +16,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.logging_service import MultiprocessLogger
+from dotenv import load_dotenv
+load_dotenv()
 
 logger = MultiprocessLogger.get_logger("Mapping")
 

@@ -8,8 +8,8 @@ import paho.mqtt.client as  mqtt
 
 # Configs
 BOVINE_ID = "4"
-# MQTT_BROKER = "192.168.101.148"
-MQTT_BROKER = "localhost"
+MQTT_BROKER = "164.52.194.74"
+# MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
 MQTT_TOPIC = b"inference/microphone"
 WAV_FILE_PATH = "/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/HFC1.wav"  # Must be mono, 16-bit, 22500Hz
@@ -20,7 +20,7 @@ CHUNK_SIZE = 1024
 def publish_message(broker, port, topic, message):
 
     client = mqtt.Client()
-    client.connect(broker, port, 60)
+    client.connect(broker, port, 120)
     json_message = message
     client.publish(topic, json_message)
     if idx is not None:
@@ -30,7 +30,7 @@ def publish_message(broker, port, topic, message):
 # client = mqtt_connect("esp32-client", MQTT_BROKER, MQTT_PORT)
 
 def sim():
-    broker = "localhost"
+    broker = MQTT_BROKER
     port = 1883
     topics = "inference/microphone"
     try:
