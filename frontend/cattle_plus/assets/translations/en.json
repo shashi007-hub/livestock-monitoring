@@ -33,6 +33,14 @@
   "minutes": "minutes",
   "ago": "ago",
   "Sent at": "Sent at",
+  "Symptom": "Symptom",
+  "Treatment": "Treatment",
+  "Average Grazing Time": "Average Grazing Time",
+  "Peak grazing time": "Peak Grazing Time",
+  "days_recorded": "{} days recorded",
+  "Daily Grazing Time (Hours)": "Daily Grazing Time (Hours)",
+  "h": "h",
+
    "health": {
     "problem": {
       "high_distress_detected": "High distress detected",

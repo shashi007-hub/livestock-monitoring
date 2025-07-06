@@ -6,13 +6,14 @@ import os
 import wave
 import paho.mqtt.client as  mqtt
 
+
 # Configs
-BOVINE_ID = "4"
-MQTT_BROKER = "164.52.194.74"
-# MQTT_BROKER = "localhost"
-MQTT_PORT = 1883
+BOVINE_ID = "2"
+# MQTT_BROKER = "164.52.194.74"
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1884
 MQTT_TOPIC = b"inference/microphone"
-WAV_FILE_PATH = "/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/HFC1.wav"  # Must be mono, 16-bit, 22500Hz
+WAV_FILE_PATH = "/Users/apple/Documents/pragathi-ai/git-repo/livestock-monitoring/test_scripts/HFC2_noisy.wav"  # Must be mono, 16-bit, 22500Hz
 idx = None
 # Audio chunking config
 CHUNK_SIZE = 1024
@@ -20,7 +21,7 @@ CHUNK_SIZE = 1024
 def publish_message(broker, port, topic, message):
 
     client = mqtt.Client()
-    client.connect(broker, port, 120)
+    client.connect(broker, port, 60)
     json_message = message
     client.publish(topic, json_message)
     if idx is not None:
@@ -30,7 +31,7 @@ def publish_message(broker, port, topic, message):
 # client = mqtt_connect("esp32-client", MQTT_BROKER, MQTT_PORT)
 
 def sim():
-    broker = MQTT_BROKER
+    broker = "localhost"
     port = 1883
     topics = "inference/microphone"
     try:
@@ -43,6 +44,7 @@ def sim():
             num_chunks = total_bytes // CHUNK_SIZE + (1 if total_bytes % CHUNK_SIZE else 0)
 
             print(f"Audio will be split into {num_chunks} chunks")
+
 
             # Send start chunk
             start_msg = json.dumps({
@@ -74,6 +76,7 @@ def sim():
                 print("data_msg:", data_msg)
                 publish_message(broker, port, topics, data_msg)
                 # client.publish(MQTT_TOPIC, data_msg)
+                time.sleep(0.1)
 
                 chunk_index += 1
 

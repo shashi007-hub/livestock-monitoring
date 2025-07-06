@@ -33,7 +33,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         listener: (context, state) {
           if (state is AddAnimalSuccess) {
             Fluttertoast.showToast(msg: 'Animal added successfully!');
-            Navigator.pop(context);
+            Navigator.pop(context, true);
           } else if (state is AddAnimalError) {
             Fluttertoast.showToast(msg: state.message);
           }

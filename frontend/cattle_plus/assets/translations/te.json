@@ -21,7 +21,7 @@
   "Danger": "తక్షణమే శ్రద్ధ అవసరం",
   "status_label": "స్థితి: {}",
   "last_update": "చివరి నవీకరణ: {}",
-  "sms_alert_history": "SMS హెచ్చరికల చరిత్ర",
+  "sms_alert_history": "ఎస్‌ఎమ్‌ఎస్‌ హెచ్చరికల చరిత్ర",
   "Logout": "యాప్ నుంచి బయటకి వెళ్ళండి",
   "choose_language": "భాషను ఎంచుకోండి",
   "Just now": "ఇప్పుడే",
@@ -33,6 +33,14 @@
   "minutes": "నిమిషాలు",
   "ago": "క్రితం",
   "Sent at": "పంపిన సమయం",
+  "Symptom": "లక్షణం",
+  "Treatment": "చికిత్స",
+  "Average Grazing Time": "సగటు మేత కాలం",
+  "Peak grazing time": "గరిష్ఠ మేత కాలం",
+  "days_recorded": "{} రోజులు నమోదుయ్యాయి",
+  "Daily Grazing Time (Hours)": "రోజువారీ మేత కాలం (గంటలు)",
+  "h" : "గం",
+
   "health": {
     "problem": {
       "high_distress_detected": "ఎక్కువ ఆందోళన గుర్తించబడింది",

@@ -129,30 +129,26 @@ class MessageTile extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 8),
+              Text(
+                '${'Sent at'.tr()}: ${_formatTimestamp(timestamp)}',
+                style: TextStyle(fontSize: 15, color: Colors.black38),
+              ),
+              SizedBox(height: 8),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(
-                    '${'Sent at'.tr()}: ${_formatTimestamp(timestamp)}',
-                    style: TextStyle(fontSize: 15, color: Colors.black38),
+                  Icon(
+                    Icons.access_time,
+                    size: 18,
+                    color: const Color.fromARGB(180, 182, 51, 51),
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 18,
-                        color: const Color.fromARGB(180, 182, 51, 51),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        relativeTime,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: const Color.fromARGB(180, 182, 51, 51),
-                        ),
-                      ),
-                    ],
+                  SizedBox(width: 4),
+                  Text(
+                    relativeTime,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: const Color.fromARGB(180, 182, 51, 51),
+                    ),
                   ),
                 ],
               ),

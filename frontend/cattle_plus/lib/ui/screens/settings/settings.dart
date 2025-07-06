@@ -25,8 +25,13 @@ class SettingsUI extends StatelessWidget {
               textColor: Colors.white,
             );
           } else if (state is SettingsSuccess) {
-            print('Logging out');
-            Navigator.pushNamed(context, Routes.SPLASH, arguments: '');
+            print('Logging out - navigating to splash screen');
+            // Clear all routes and navigate to splash
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              Routes.SPLASH,
+              (route) => false,
+            );
           }
         },
         builder: (context, state) {
@@ -38,10 +43,18 @@ class SettingsUI extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Theme.of(
-                      context,
-                    ).colorScheme.primaryContainer.withOpacity(0.8),
-                    Theme.of(context).colorScheme.primaryContainer,
+                    const Color.fromARGB(
+                      255,
+                      240,
+                      245,
+                      240,
+                    ), // Very light grey-green
+                    const Color.fromARGB(
+                      255,
+                      235,
+                      242,
+                      235,
+                    ), // Slightly darker light grey-green
                   ],
                 ),
               ),
@@ -117,23 +130,72 @@ class SettingsUI extends StatelessWidget {
 
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: ElevatedButton(
-                        onPressed:
-                            state is SettingsLoading
-                                ? null
-                                : () {
-                                  context.read<SettingsCubit>().logout();
-                                },
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child:
-                            state is SettingsLoading
-                                ? const CircularProgressIndicator()
-                                : Text('Logout'.tr()),
+                        child: ElevatedButton(
+                          onPressed:
+                              state is SettingsLoading
+                                  ? null
+                                  : () {
+                                    context.read<SettingsCubit>().logout();
+                                  },
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 52),
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              97,
+                              156,
+                              100,
+                            ), // Darker, muted green
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child:
+                              state is SettingsLoading
+                                  ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.logout_rounded,
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Logout'.tr(),
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.white,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                        ),
                       ),
                     ),
                   ],

@@ -33,6 +33,13 @@
   "minutes": "मिनट",
   "ago": "पहले",
   "Sent at": "समय",
+  "Symptom": "लक्षण",
+  "Treatment": "उपचार",
+  "Average Grazing Time": "औसत चराई का समय",
+  "Peak grazing time": "अधिकतम चराई का समय",
+  "days_recorded": "{} दिन रिकॉर्ड किए गए",
+  "Daily Grazing Time (Hours)": "रोज़ाना चराई का समय (घंटों में)",
+  "h" : "घं",
   "health": {
     "problem": {
       "high_distress_detected": "उच्च तनाव का पता चला",

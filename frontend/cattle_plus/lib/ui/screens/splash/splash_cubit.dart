@@ -23,9 +23,25 @@ class SplashCubit extends Cubit<SplashState> {
     final box = await Hive.openBox('authBox');
     final user = box.get('username');
     final jwt = box.get('jwt');
+    final logoutPerformed = box.get('logout_performed');
+
+    print(
+      'Splash initialization - User: $user, JWT: ${jwt != null ? "present" : "null"}, LogoutFlag: $logoutPerformed',
+    );
+
+    // If logout was performed, clear the flag and show auth options
+    if (logoutPerformed == true) {
+      await box.delete('logout_performed');
+      print('Logout flag detected and cleared, showing auth options');
+      emit(SplashShowAuthOptions());
+      return;
+    }
+
     if (user != null && jwt != null) {
+      print('Valid auth data found, navigating to home');
       emit(SplashSuccess());
     } else {
+      print('No valid auth data found, showing auth options');
       emit(SplashShowAuthOptions());
     }
   }

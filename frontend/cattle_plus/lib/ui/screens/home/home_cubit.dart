@@ -18,31 +18,22 @@ class HomeCubit extends Cubit<HomeState> {
       final box = await Hive.openBox('authBox');
       final user_Id = await getUserId();
       print(user_Id);
-      final userId = 2;
+      final userId = user_Id;
       final response = await http.get(
         Uri.parse('http://$SERVER_URL/home/$userId'),
       ); // Replace 1 with actual user_id
       print(response.body);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print(data);
-        print("searching for bovines");
-        print(data['bovines']);
         final bovines =
             (data['bovines'] as List).map((b) => Bovine.fromJson(b)).toList();
-        print("bovines");
-        print(bovines);
         final statuses =
             (data['status'] as List)
                 .map((s) => BovineStatus.fromJson(s))
                 .toList();
-        print("statuses");
-        print(statuses);
-        final userName = await getUserName();
-        print(userName);
-        final cityName = await getCityName();
-        print(cityName);
 
+        final userName = await getUserName();
+        final cityName = await getCityName();
         emit(
           HomeLoaded(
             username: userName, // This should come from user profile

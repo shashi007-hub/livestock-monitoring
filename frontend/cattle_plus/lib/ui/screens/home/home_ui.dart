@@ -28,13 +28,16 @@ class HomeScreen extends StatelessWidget {
             final random = Random();
             return Scaffold(
               floatingActionButton: FloatingActionButton(
-                onPressed:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddAnimalScreen(),
-                      ),
-                    ),
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AddAnimalScreen()),
+                  );
+                  // If result is true, refresh the home data
+                  if (result == true) {
+                    context.read<HomeCubit>().loadHomeData();
+                  }
+                },
                 child: const Icon(Icons.add),
               ),
               body: CustomScrollView(
@@ -87,7 +90,7 @@ class HomeScreen extends StatelessWidget {
                                           children: [
                                             const Icon(
                                               Icons.warning_amber_outlined,
-                                              color: Colors.orangeAccent,
+                                              color: Color.fromARGB(255, 231, 11, 3),
                                             ),
                                             const SizedBox(width: 5),
                                             Text(
@@ -212,12 +215,13 @@ class HomeScreen extends StatelessWidget {
   }
 
   AnimalStatus _mapStatusToEnum(String status) {
+  
     switch (status.toLowerCase()) {
       case 'normal':
         return AnimalStatus.normal;
       case 'danger':
         return AnimalStatus.danger;
-      case 'needsAttention':
+      case 'needsattention':
         return AnimalStatus.needsAttention;
       default:
         return AnimalStatus.normal;

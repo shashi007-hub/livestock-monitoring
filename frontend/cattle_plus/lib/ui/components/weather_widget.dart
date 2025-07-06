@@ -34,6 +34,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   Future<void> _fetchWeather() async {
     // IMPORTANT: Replace with your actual API key and endpoint
     final langCode = context.locale.languageCode;
+    print('Fetching weather for language: $langCode');
 
     // &lang=$langCode
     final url = Uri.parse(
