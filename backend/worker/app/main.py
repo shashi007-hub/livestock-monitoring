@@ -119,6 +119,7 @@ def   run_inference_and_publish(messages):
 def on_message(client, userdata, msg):
     try:
         message = json.loads(msg.payload.decode())
+        logger.info(message)
         if not isinstance(message, dict):
             logger.error(f"[{WORKER_ID}] Error: Decoded message is not a dictionary: {message}")
             return

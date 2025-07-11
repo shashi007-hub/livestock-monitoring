@@ -14,9 +14,15 @@ from app.database.models import DistressCall, FeedingPatterns, SMSAlerts
 from app.alerts import send_sms_alert
 import sys
 import os
+from dotenv import load_dotenv
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.logging_service import MultiprocessLogger
+import openpyxl
+from openpyxl import Workbook
+import threading
+import time  # Make sure this is imported at the top
 
+load_dotenv()
 logger = MultiprocessLogger.get_logger("Mapping")
 
 class Predictions(Enum):
@@ -227,11 +233,12 @@ def microphone_pipeline(batch_data):
     # Main pipeline
     logger.info(f"Processing microphone batch data: {len(batch_data['data'])} messages for bovine {batch_data['data'][0]['bovine_id']}")
     db = db_session()
-
+    inf_start = time.time()
     try:
         predictions = []
         # print("*****", batch_data['data'])
         for message in batch_data['data']:
+            start_time = time.time()
             bovine_id = message['bovine_id']
             logger.info(f"Processing message for Bovine {bovine_id}")
             # timestamp = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")  # Assume ISO format
@@ -263,6 +270,17 @@ def microphone_pipeline(batch_data):
             distress_model = os.getenv("DISTRESS_MODEL_PATH")
             frequency_class, probability = predict_from_wav(distress_model,temp_wav_path)
             logger.info(f"Distress model prediction for Bovine {bovine_id} at {timestamp}: {frequency_class}, Probability: {probability}")
+            end_time = time.time()
+
+            # Log to Excel
+            log_to_excel(
+                start_time=start_time,
+                end_time=end_time,
+                frequency_class=frequency_class,
+                bite_chew=label,
+                bovine_id=bovine_id
+            )
+
             if frequency_class == Predictions.HFC: # or frequency_class  Predictions.LFC:
                 distress_call = DistressCall(
                     bovine_id=bovine_id,
@@ -271,9 +289,9 @@ def microphone_pipeline(batch_data):
                 )
                 bovine_name = _get_bovin_name_from_db(bovine_id)
                 distress_message = f"Alert: Your animal, {bovine_name}, is showing signs of distress. Please check on it as soon as possible."
-                send_sms_alert(distress_message, bovine_id)
-            
-                db.add(distress_call)
+
+                '''send_sms_alert(distress_message, bovine_id)
+                   db.add(distress_call)
 
                 sms_alert = SMSAlerts(
                     user_id=1,
@@ -282,7 +300,7 @@ def microphone_pipeline(batch_data):
                     message=distress_message
                 )
 
-                db.add(sms_alert)
+                db.add(sms_alert)'''
 
             # Cleanup
             os.remove(temp_wav_path)
@@ -293,6 +311,7 @@ def microphone_pipeline(batch_data):
                 timestamp=timestamp,
                 bite_chew=pred
             )
+
             db.add(feeding_pattern)
             logger.info(f"Saved feeding pattern for Bovine {bovine_id} at {timestamp}: {pred}")
             logger.info("processed audio data")
@@ -467,3 +486,26 @@ def camera_pipeline(batch_data):
         logger.error(f"Error in camera pipeline: {e}", exc_info=True)
 
     return "Camera pipeline triggered ✅"
+
+import openpyxl
+from openpyxl import Workbook
+import threading
+
+excel_lock = threading.Lock()  # To avoid race conditions in parallel processes
+
+def log_to_excel(start_time, end_time, frequency_class, bite_chew, bovine_id, excel_path="inference_log.xlsx"):
+    with excel_lock:
+        try:
+            # Try to load existing workbook, else create new
+            try:
+                wb = openpyxl.load_workbook(excel_path)
+                ws = wb.active
+            except FileNotFoundError:
+                wb = Workbook()
+                ws = wb.active
+                ws.append(["Start Time", "End Time", "Frequency Class", "Bite/Chew", "Bovine ID","Latency"])  # Header
+
+            ws.append([start_time, end_time, str(frequency_class), str(bite_chew), bovine_id, end_time - start_time])  # Log data
+            wb.save(excel_path)
+        except Exception as e:
+            logger.error(f"Error logging to Excel: {e}", exc_info=True)

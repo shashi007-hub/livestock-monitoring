@@ -7,6 +7,7 @@ services:
     container_name: api
     environment:
       DEBUG: "0"
+      DATABASE_URL: postgresql://user:password@postgres:5432/mydb
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   worker:
@@ -15,4 +16,5 @@ services:
     container_name: worker
     environment:
       DEBUG: "0"
-    command: ["python", "app/main.py"]
+      DATABASE_URL: postgresql://user:password@postgres:5432/mydb
+    # command: ["python", "app/main.py"]

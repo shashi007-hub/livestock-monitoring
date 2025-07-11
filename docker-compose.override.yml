@@ -6,6 +6,7 @@ services:
       - ./backend/api:/app
     environment:
       DEBUG: "1"
+      DATABASE_URL: postgresql://user:password@postgres:5432/mydb
     command: ["sh", "-c", "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --reload"]
 
   worker:
@@ -13,4 +14,5 @@ services:
       - ./backend/worker:/app
     environment:
       DEBUG: "1"
+      DATABASE_URL: postgresql://user:password@postgres:5432/mydb
     command: ["sh", "-c", "python ./app/my_main.py"]

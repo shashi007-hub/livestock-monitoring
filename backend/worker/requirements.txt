@@ -13,3 +13,4 @@ pillow
 easyocr
 pandas
 joblib
+openpyxl
