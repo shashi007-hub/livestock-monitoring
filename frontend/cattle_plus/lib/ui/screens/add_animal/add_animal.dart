@@ -41,123 +41,130 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(title: const Text('Add New Animal')),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12),
+            body: SafeArea(
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child:
+                                _imageFile != null
+                                    ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(
+                                        _imageFile!,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                    : const Icon(Icons.add_a_photo, size: 50),
+                          ),
                         ),
-                        child:
-                            _imageFile != null
-                                ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(
-                                    _imageFile!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                                : const Icon(Icons.add_a_photo, size: 50),
-                      ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator:
+                              (value) =>
+                                  value?.isEmpty ?? true
+                                      ? 'Name is required'
+                                      : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _ageController,
+                          decoration: const InputDecoration(
+                            labelText: 'Age',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator:
+                              (value) =>
+                                  value?.isEmpty ?? true
+                                      ? 'Age is required'
+                                      : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _weightController,
+                          decoration: const InputDecoration(
+                            labelText: 'Weight',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator:
+                              (value) =>
+                                  value?.isEmpty ?? true
+                                      ? 'Weight is required'
+                                      : null,
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<BreedType>(
+                          value: _selectedBreed,
+                          decoration: const InputDecoration(
+                            labelText: 'Breed',
+                            border: OutlineInputBorder(),
+                          ),
+                          items:
+                              BreedType.values.map((breed) {
+                                return DropdownMenuItem(
+                                  value: breed,
+                                  child: Text(breed.displayName),
+                                );
+                              }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedBreed = value!;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _fatherIdController,
+                          decoration: const InputDecoration(
+                            labelText: 'Father ID (Optional)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _motherIdController,
+                          decoration: const InputDecoration(
+                            labelText: 'Mother ID (Optional)',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed:
+                              state is AddAnimalLoading
+                                  ? null
+                                  : () => _submitForm(context),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child:
+                              state is AddAnimalLoading
+                                  ? const CircularProgressIndicator()
+                                  : const Text('Add Animal'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Name',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator:
-                          (value) =>
-                              value?.isEmpty ?? true
-                                  ? 'Name is required'
-                                  : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _ageController,
-                      decoration: const InputDecoration(
-                        labelText: 'Age',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator:
-                          (value) =>
-                              value?.isEmpty ?? true ? 'Age is required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _weightController,
-                      decoration: const InputDecoration(
-                        labelText: 'Weight',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator:
-                          (value) =>
-                              value?.isEmpty ?? true
-                                  ? 'Weight is required'
-                                  : null,
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<BreedType>(
-                      value: _selectedBreed,
-                      decoration: const InputDecoration(
-                        labelText: 'Breed',
-                        border: OutlineInputBorder(),
-                      ),
-                      items:
-                          BreedType.values.map((breed) {
-                            return DropdownMenuItem(
-                              value: breed,
-                              child: Text(breed.displayName),
-                            );
-                          }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedBreed = value!;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _fatherIdController,
-                      decoration: const InputDecoration(
-                        labelText: 'Father ID (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _motherIdController,
-                      decoration: const InputDecoration(
-                        labelText: 'Mother ID (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed:
-                          state is AddAnimalLoading
-                              ? null
-                              : () => _submitForm(context),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child:
-                          state is AddAnimalLoading
-                              ? const CircularProgressIndicator()
-                              : const Text('Add Animal'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

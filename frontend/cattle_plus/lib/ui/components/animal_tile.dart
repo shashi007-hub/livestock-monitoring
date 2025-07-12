@@ -24,11 +24,11 @@ class AnimalTile extends StatelessWidget {
   Color _getStatusColor(AnimalStatus status) {
     switch (status) {
       case AnimalStatus.normal:
-        return const Color.fromARGB(255, 69, 173, 73);
+        return const Color.fromARGB(255, 99, 158, 70);
       case AnimalStatus.needsAttention:
-        return const Color.fromARGB(255, 245, 175, 64); // Material Yellow 500
+        return const Color.fromARGB(255, 243, 181, 80); // Material Yellow 500
       case AnimalStatus.danger:
-        return const Color.fromARGB(255, 245, 42, 42);
+        return const Color.fromARGB(255, 245, 80, 80);
       // No default needed as all enum cases are handledR
     }
   }
@@ -80,8 +80,8 @@ class AnimalTile extends StatelessWidget {
             Positioned.fill(child: Image.network(imageUrl, fit: BoxFit.cover)),
             Positioned.fill(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-                child: Container(color: statusColor.withOpacity(0.5)),
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: Container(color: statusColor.withOpacity(0.7)),
               ),
             ),
             // Row with profile image on the left and text on the right

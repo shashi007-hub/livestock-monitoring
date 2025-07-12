@@ -74,6 +74,6 @@ if __name__ == "__main__":
     else:
         print("Failed to encode image. Exiting.")   
     for i in range(1):
-        time.sleep(1)
+        time.sleep(5)
         publish_message(broker, port, random.choice(topics), message)
         time.sleep(1)

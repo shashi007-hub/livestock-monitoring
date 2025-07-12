@@ -90,7 +90,12 @@ class HomeScreen extends StatelessWidget {
                                           children: [
                                             const Icon(
                                               Icons.warning_amber_outlined,
-                                              color: Color.fromARGB(255, 231, 11, 3),
+                                              color: Color.fromARGB(
+                                                255,
+                                                231,
+                                                11,
+                                                3,
+                                              ),
                                             ),
                                             const SizedBox(width: 5),
                                             Text(
@@ -164,46 +169,80 @@ class HomeScreen extends StatelessWidget {
                     ),
                     pinned: true,
                   ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      if (index == 0) {
-                        return WeatherWidget(
-                          username: state.username,
-                          city: state.city,
-                        );
-                      }
+                  // --- SORTED ANIMAL TILES ---
+                  Builder(
+                    builder: (context) {
+                      // Pair each bovine with its status
+                      final bovineStatusList =
+                          state.bovines.map((bovine) {
+                            final status = state.statuses.firstWhere(
+                              (s) => s.bovineId == bovine.id,
+                              orElse:
+                                  () => BovineStatus(
+                                    bovineId: bovine.id,
+                                    status: 'normal',
+                                  ),
+                            );
+                            return {'bovine': bovine, 'status': status};
+                          }).toList();
 
-                      final bovineIndex = index - 1;
-                      if (bovineIndex >= state.bovines.length) {
-                        return null;
-                      }
+                      // Sort by danger > needs attention > normal
+                      bovineStatusList.sort((a, b) {
+                        int getRank(String status) {
+                          switch (_mapStatusToEnum(status)) {
+                            case AnimalStatus.danger:
+                              return 0;
+                            case AnimalStatus.needsAttention:
+                              return 1;
+                            case AnimalStatus.normal:
+                            default:
+                              return 2;
+                          }
+                        }
 
-                      final bovine = state.bovines[bovineIndex];
-                      final status = state.statuses.firstWhere(
-                        (s) => s.bovineId == bovine.id,
-                        orElse:
-                            () => BovineStatus(
-                              bovineId: bovine.id,
-                              status: 'normal',
-                            ),
+                        final aStatus = (a['status'] as BovineStatus).status;
+                        final bStatus = (b['status'] as BovineStatus).status;
+                        return getRank(aStatus).compareTo(getRank(bStatus));
+                      });
+
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          if (index == 0) {
+                            return WeatherWidget(
+                              username: state.username,
+                              city: state.city,
+                            );
+                          }
+
+                          final bovineIndex = index - 1;
+                          if (bovineIndex >= bovineStatusList.length) {
+                            return null;
+                          }
+
+                          final bovine =
+                              bovineStatusList[bovineIndex]['bovine'] as Bovine;
+                          final status =
+                              bovineStatusList[bovineIndex]['status']
+                                  as BovineStatus;
+
+                          return AnimalTile(
+                            onTap:
+                                () => Navigator.pushNamed(
+                                  context,
+                                  Routes.ANIMAL_SUMMARY,
+                                  arguments: bovine.id.toString(),
+                                ),
+                            name: bovine.name,
+                            status: _mapStatusToEnum(status.status),
+                            lastSeen:
+                                DateTime.now(), // This should come from the API
+                            imageUrl: context
+                                .read<HomeCubit>()
+                                .getBovineImageUrl(bovine.id),
+                          );
+                        }),
                       );
-
-                      return AnimalTile(
-                        onTap:
-                            () => Navigator.pushNamed(
-                              context,
-                              Routes.ANIMAL_SUMMARY,
-                              arguments: bovine.id.toString(),
-                            ),
-                        name: bovine.name,
-                        status: _mapStatusToEnum(status.status),
-                        lastSeen:
-                            DateTime.now(), // This should come from the API
-                        imageUrl: context.read<HomeCubit>().getBovineImageUrl(
-                          bovine.id,
-                        ),
-                      );
-                    }),
+                    },
                   ),
                 ],
               ),
@@ -215,7 +254,6 @@ class HomeScreen extends StatelessWidget {
   }
 
   AnimalStatus _mapStatusToEnum(String status) {
-  
     switch (status.toLowerCase()) {
       case 'normal':
         return AnimalStatus.normal;

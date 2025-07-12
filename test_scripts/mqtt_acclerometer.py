@@ -45,7 +45,8 @@ def create_json_records(data, bovine_id):
 def publish_message(broker, port, topic, message):
     """Publish a JSON message to an MQTT topic."""
     client = mqtt.Client()
-    client.connect(broker, port, 60)
+    client._connect_timeout = 600
+    client.connect(broker, port, 600)
     json_message = json.dumps(message)
     client.publish(topic, json_message)
     print(f"Published to {topic}: {json_message}")
