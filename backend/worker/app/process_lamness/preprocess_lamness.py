@@ -8,6 +8,12 @@ import json
 import pandas as pd
 import joblib
 import os
+from dotenv import load_dotenv
+from app.logging_service import MultiprocessLogger
+
+load_dotenv()
+
+logger = MultiprocessLogger.get_logger(__name__)
 
 hello = {
   "acclerometer_data": [
@@ -72,32 +78,32 @@ hello = {
 }
 
 def ExtractFeaturesFromJSON(json_input):
-    print("ExtractFeaturesFromJSON called")
+    logger.info("ExtractFeaturesFromJSON called")
     try:
         # Convert JSON string to Python dict if needed
         # json_input =   hello 
         # if isinstance(json_input, str):
         #     json_input = json_input.replace("'", '"')
-        #     print(json_input)
+        #     logger.info(json_input)
         #     data_dict = json.loads(json_input)
         # elif isinstance(json_input, dict):
         #     data_dict = json_input
         # else:
-        #     print("Invalid input format. Must be JSON string or dictionary.")
+        #     logger.error("Invalid input format. Must be JSON string or dictionary.")
         #     return None
 
         # Check if the key 'acclerometer_data' exists
         if 'acclerometer_data' not in json_input:
-            print("Key 'acclerometer_data' not found in input JSON.")
+            logger.error("Key 'acclerometer_data' not found in input JSON.")
             return None
 
         # Extract accelerometer data from the JSON
         accelerometer_data = json_input['acclerometer_data']
-        print("Accelerometer data extracted successfully.")
+        logger.info("Accelerometer data extracted successfully.")
         # Convert   accelerometer data to a DataFrame
         df = pd.DataFrame(accelerometer_data)
         df = df.dropna()
-
+        # logger.info("columns in df", df.columns)
         features = ['Acceleration_x', 'Acceleration_y', 'Acceleration_z',
                     'Gravity_x', 'Gravity_y', 'Gravity_z',
                     'Rotation_x', 'Rotation_y', 'Rotation_z',
@@ -105,76 +111,105 @@ def ExtractFeaturesFromJSON(json_input):
 
         # Check if all required features are in the data
         if not all(feature in df.columns for feature in features):
-            print("Missing required features in input data.")
+            logger.error("Missing required features in input data.")
             return None
 
         # Load the scaler
-        print("Loading scaler...")
-        scaler_filename = "app/models/Scalar_lamness.pkl"
+        logger.info("Loading scaler...")
+        scaler_filename = os.getenv("LAMNESS_SCALAR_MODEL_PATH")
         if not os.path.exists(scaler_filename):
-            print(f"Scaler file '{scaler_filename}' does not exist.")
+            logger.error(f"Scaler file '{scaler_filename}' does not exist.")
             return None
 
         scaler = joblib.load(scaler_filename)
-        print("Scaler loaded successfully.")
+        logger.info("Scaler loaded successfully.")
 
         # Scale the data
         scaled_data = scaler.transform(df[features])
         df_scaled = pd.DataFrame(scaled_data, columns=features, index=df.index)
-        print("Data scaled successfully.")
+        logger.info("Data scaled successfully.")
         # Add cumulative sum features
         for feature in features:
             df_scaled[f'Cumsum_{feature}'] = df_scaled[feature].cumsum()
-        print("Cumulative sum features added successfully.")
+        logger.info("Cumulative sum features added successfully.")
         # Add rolling features
         window_size = 5
         for feature in features:
             df_scaled[f'Rolling_Mean_{feature}'] = df_scaled[feature].rolling(window=window_size).mean()
             df_scaled[f'Rolling_Std_{feature}'] = df_scaled[feature].rolling(window=window_size).std()
-        print("Rolling features added successfully.")
+        logger.info("Rolling features added successfully.")
         # Drop rows with any NaN values resulting from rolling operations
         return df_scaled.dropna()
 
     except Exception as e:
-        print(f"Error in ExtractFeaturesFromJSON: {e}")
+        logger.error(f"Error in ExtractFeaturesFromJSON: {e}")
+        return None
+
+
+def count_steps_from_accelerometer(data):
+    """Count steps from accelerometer data with error handling and logging."""
+    try:
+        import scipy.signal as signal
+        if 'acclerometer_data' not in data:
+            logger.error("No 'acclerometer_data' found for step counting.")
+            return None
+        df = pd.DataFrame(data['acclerometer_data'])
+        required_cols = ['Acceleration_x', 'Acceleration_y', 'Acceleration_z']
+        if not all(col in df.columns for col in required_cols):
+            logger.error("Missing acceleration columns for step counting.")
+            return None
+        df['acc_magnitude'] = np.sqrt(df['Acceleration_x']**2 + df['Acceleration_y']**2 + df['Acceleration_z']**2)
+        if len(df['acc_magnitude']) < 5:
+            logger.error("Not enough data points for smoothing and peak detection.")
+            return None
+        df['acc_magnitude_smooth'] = signal.savgol_filter(df['acc_magnitude'], window_length=5, polyorder=2)
+        peaks, _ = signal.find_peaks(df['acc_magnitude_smooth'], height=0.01, distance=10)
+        number_of_steps = len(peaks)
+        # number_of_steps =  10
+        logger.info(f"Estimated Number of Steps: {number_of_steps}")
+        return number_of_steps
+    except Exception as e:
+        logger.error(f"Error during step counting: {e}")
         return None
 
 
 def predict_lameness(data):
-    print("predict_lameness called")
+    logger.info("predict_lameness called")
     try:
-        print("transforming data")
+        logger.info("transforming data")
         FEdata = ExtractFeaturesFromJSON(data)
         if FEdata is None:
-            print("Feature extraction failed.")
+            logger.error("Feature extraction failed.")
             return None
         
-        print("after FEdata", FEdata.head())
+        # logger.info("after FEdata", FEdata.head())
         predictions = []
 
-        model_path = 'app/models/trained_modelnew.pkl'
+        model_path = os.getenv("LAMNESS_MODEL_PATH")
         if not os.path.exists(model_path):
-            print(f"Model file '{model_path}' does not exist.")
+            logger.error(f"Model file '{model_path}' does not exist.")
             return None
 
         loaded_model = joblib.load(model_path)
-        print("Model loaded successfully.")
+        logger.info("Model loaded successfully.")
 
         try:
             for i in range(len(FEdata)):
                 pred = loaded_model.predict(FEdata.iloc[[i]])
                 predictions.append(pred[0])
-                print(f"Prediction for sample {i}: {pred[0]}")
         except Exception as e:
-            print(f"Error during model prediction: {e}")
+            logger.error(f"Error during model prediction: {e}")
             return None
 
         mean_prediction = np.mean(predictions)
-        print(f"Mean prediction: {mean_prediction}")
+        logger.info(f"Mean prediction: {mean_prediction}")
         prediction = math.ceil(mean_prediction)
-        print(f"Final prediction (rounded): {prediction}")
-        prediction = 4
-        return prediction
+        logger.info(f"Final prediction (rounded): {prediction}")
+
+        # Use the new step counting function
+        number_of_steps = count_steps_from_accelerometer(data)
+
+        return {"prediction": prediction, "steps": number_of_steps}
     except Exception as e:
-        print(f"Error in predict_lameness: {e}")
+        logger.error(f"Error in predict_lameness: {e}")
         return None

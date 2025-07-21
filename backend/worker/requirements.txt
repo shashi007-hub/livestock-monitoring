@@ -9,9 +9,7 @@ psycopg2-binary
 twilio
 python-dotenv
 librosa
-keras
 pillow
-tensorflow
 easyocr
 pandas
 joblib

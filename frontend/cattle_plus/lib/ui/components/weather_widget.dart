@@ -4,16 +4,13 @@ import 'package:http/http.dart' as http;
 import 'package:weather_icons/weather_icons.dart'; // Use weather_icons package
 import 'package:intl/intl.dart'; // For date formatting if needed later
 import '../../env.dart'; // Import your env.dart file for API key
+import 'package:easy_localization/easy_localization.dart';
 
 class WeatherWidget extends StatefulWidget {
   final String username;
   final String city;
 
-  const WeatherWidget({
-    super.key,
-    required this.username,
-    required this.city,
-  });
+  const WeatherWidget({super.key, required this.username, required this.city});
 
   @override
   State<WeatherWidget> createState() => _WeatherWidgetState();
@@ -25,14 +22,24 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   @override
   void initState() {
     super.initState();
-    _fetchWeather();
+    // _fetchWeather();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fetchWeather(); // Now context is available
   }
 
   Future<void> _fetchWeather() async {
     // IMPORTANT: Replace with your actual API key and endpoint
-    
+    final langCode = context.locale.languageCode;
+    print('Fetching weather for language: $langCode');
+
+    // &lang=$langCode
     final url = Uri.parse(
-        'https://api.openweathermap.org/data/2.5/weather?q=${widget.city}&appid=$WEATHER_API_KEY&units=metric');
+      'https://api.openweathermap.org/data/2.5/weather?q=${widget.city}&appid=$WEATHER_API_KEY&units=metric&lang=$langCode',
+    );
 
     setState(() {
       _weatherData = _fetchData(url);
@@ -41,9 +48,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
   Future<Map<String, dynamic>> _fetchData(Uri url) async {
     try {
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-      });
+      final response = await http.get(
+        url,
+        headers: {'Content-Type': 'application/json'},
+      );
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
@@ -60,11 +68,11 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
-      return 'Good Morning';
+      return 'Good Morning'.tr();
     } else if (hour < 17) {
-      return 'Good Afternoon';
+      return 'Good Afternoon'.tr();
     } else {
-      return 'Good Evening';
+      return 'Good Evening'.tr();
     }
   }
 
@@ -74,28 +82,47 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     // And weather_icons mapping: https://github.com/fluttercommunity/weather_icons/blob/master/lib/src/weather_icons.dart (or check package docs)
     switch (iconCode) {
       // Day icons
-      case '01d': return WeatherIcons.day_sunny;
-      case '02d': return WeatherIcons.day_cloudy;
-      case '03d': return WeatherIcons.cloud;
-      case '04d': return WeatherIcons.cloudy;
-      case '09d': return WeatherIcons.day_showers;
-      case '10d': return WeatherIcons.day_rain;
-      case '11d': return WeatherIcons.day_thunderstorm;
-      case '13d': return WeatherIcons.day_snow;
-      case '50d': return WeatherIcons.day_fog;
+      case '01d':
+        return WeatherIcons.day_sunny;
+      case '02d':
+        return WeatherIcons.day_cloudy;
+      case '03d':
+        return WeatherIcons.cloud;
+      case '04d':
+        return WeatherIcons.cloudy;
+      case '09d':
+        return WeatherIcons.day_showers;
+      case '10d':
+        return WeatherIcons.day_rain;
+      case '11d':
+        return WeatherIcons.day_thunderstorm;
+      case '13d':
+        return WeatherIcons.day_snow;
+      case '50d':
+        return WeatherIcons.day_fog;
 
       // Night icons
-      case '01n': return WeatherIcons.night_clear;
-      case '02n': return WeatherIcons.night_alt_cloudy;
-      case '03n': return WeatherIcons.cloud; // Often same as day for scattered
-      case '04n': return WeatherIcons.cloudy; // Often same as day for broken
-      case '09n': return WeatherIcons.night_alt_showers;
-      case '10n': return WeatherIcons.night_alt_rain;
-      case '11n': return WeatherIcons.night_alt_thunderstorm;
-      case '13n': return WeatherIcons.night_alt_snow;
-      case '50n': return WeatherIcons.night_fog;
+      case '01n':
+        return WeatherIcons.night_clear;
+      case '02n':
+        return WeatherIcons.night_alt_cloudy;
+      case '03n':
+        return WeatherIcons.cloud; // Often same as day for scattered
+      case '04n':
+        return WeatherIcons.cloudy; // Often same as day for broken
+      case '09n':
+        return WeatherIcons.night_alt_showers;
+      case '10n':
+        return WeatherIcons.night_alt_rain;
+      case '11n':
+        return WeatherIcons.night_alt_thunderstorm;
+      case '13n':
+        return WeatherIcons.night_alt_snow;
+      case '50n':
+        return WeatherIcons.night_fog;
 
-      default: return WeatherIcons.na; // Default/unknown
+      default:
+        return WeatherIcons.na; // Default/unknown
     }
   }
 
@@ -135,14 +162,20 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
                   return Row(
                     children: [
-                      Icon(_getWeatherIcon(iconCode), size: 40.0, color: Theme.of(context).iconTheme.color ?? Colors.black), // Use Icon
+                      Icon(
+                        _getWeatherIcon(iconCode),
+                        size: 40.0,
+                        color:
+                            Theme.of(context).iconTheme.color ?? Colors.black,
+                      ), // Use Icon
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              cityName ?? widget.city, // Show API city name or fallback
+                              cityName ??
+                                  widget.city, // Show API city name or fallback
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             Text(
@@ -155,7 +188,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                     ],
                   );
                 } else {
-                  return const Center(child: Text('No weather data available.'));
+                  return const Center(
+                    child: Text('No weather data available.'),
+                  );
                 }
               },
             ),

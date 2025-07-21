@@ -91,30 +91,40 @@ class _SplashScreenState extends State<SplashScreen> {
                           return Column(
                             children: [
                               const CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                               const SizedBox(height: 24),
                               Text(
                                 'Checking your session...',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           );
                         } else if (state is SplashError) {
                           return Column(
                             children: [
-                              Icon(Icons.error_outline, color: Colors.red[200], size: 40),
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red[200],
+                                size: 40,
+                              ),
                               const SizedBox(height: 16),
                               Text(
                                 state.message,
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton.icon(
@@ -123,7 +133,8 @@ class _SplashScreenState extends State<SplashScreen> {
                                 label: const Text('Retry'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
-                                  foregroundColor: Theme.of(context).primaryColor,
+                                  foregroundColor:
+                                      Theme.of(context).primaryColor,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -136,47 +147,77 @@ class _SplashScreenState extends State<SplashScreen> {
                             children: [
                               Text(
                                 'Welcome to Cattle Plus!',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.2,
-                                    ),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
                               ),
                               const SizedBox(height: 16),
                               Text(
                                 'Sign in or create an account to continue',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: Colors.white.withOpacity(0.9),
-                                    ),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
                               ),
                               const SizedBox(height: 32),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   ElevatedButton(
-                                    onPressed: () => Navigator.of(context).pushReplacementNamed(Routes.LOGIN),
+                                    onPressed:
+                                        () => Navigator.of(
+                                          context,
+                                        ).pushReplacementNamed(Routes.LOGIN),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
-                                      foregroundColor: Theme.of(context).primaryColor,
+                                      foregroundColor:
+                                          Theme.of(context).primaryColor,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 14,
+                                      ),
                                     ),
-                                    child: const Text('Login', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    child: const Text(
+                                      'Login',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 20),
                                   OutlinedButton(
-                                    onPressed: () => Navigator.of(context).pushReplacementNamed(Routes.SIGNUP),
+                                    onPressed:
+                                        () => Navigator.of(
+                                          context,
+                                        ).pushReplacementNamed(Routes.SIGNUP),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: Colors.white,
-                                      side: BorderSide(color: Colors.white.withOpacity(0.8), width: 2),
+                                      side: BorderSide(
+                                        color: Colors.white.withOpacity(0.8),
+                                        width: 2,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 14,
+                                      ),
                                     ),
-                                    child: const Text('Sign Up', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    child: const Text(
+                                      'Sign Up',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),

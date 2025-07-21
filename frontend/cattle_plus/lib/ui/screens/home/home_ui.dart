@@ -9,6 +9,7 @@ import 'package:cattle_plus/ui/screens/add_animal/add_animal.dart';
 import 'package:cattle_plus/ui/screens/home/home_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -27,13 +28,16 @@ class HomeScreen extends StatelessWidget {
             final random = Random();
             return Scaffold(
               floatingActionButton: FloatingActionButton(
-                onPressed:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddAnimalScreen(),
-                      ),
-                    ),
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AddAnimalScreen()),
+                  );
+                  // If result is true, refresh the home data
+                  if (result == true) {
+                    context.read<HomeCubit>().loadHomeData();
+                  }
+                },
                 child: const Icon(Icons.add),
               ),
               body: CustomScrollView(
@@ -48,7 +52,7 @@ class HomeScreen extends StatelessWidget {
                             kToolbarHeight + MediaQuery.of(context).padding.top;
 
                         return FlexibleSpaceBar(
-                          title: isCollapsed ? const Text('Home') : null,
+                          title: isCollapsed ? Text('Home'.tr()) : null,
                           centerTitle: true,
                           background: Center(
                             child: Row(
@@ -78,15 +82,20 @@ class HomeScreen extends StatelessWidget {
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        const Text(
-                                          'Anomalies',
+                                        Text(
+                                          'Anomalies'.tr(),
                                           style: TextStyle(color: Colors.black),
                                         ),
                                         Row(
                                           children: [
                                             const Icon(
                                               Icons.warning_amber_outlined,
-                                              color: Colors.orangeAccent,
+                                              color: Color.fromARGB(
+                                                255,
+                                                231,
+                                                11,
+                                                3,
+                                              ),
                                             ),
                                             const SizedBox(width: 5),
                                             Text(
@@ -105,8 +114,8 @@ class HomeScreen extends StatelessWidget {
                                 Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text(
-                                      'Avg Steps',
+                                    Text(
+                                      'Avg Steps'.tr(),
                                       style: TextStyle(color: Colors.black),
                                     ),
                                     Row(
@@ -130,8 +139,8 @@ class HomeScreen extends StatelessWidget {
                                 Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text(
-                                      'Grazing Volume',
+                                    Text(
+                                      'Grazing Volume'.tr(),
                                       style: TextStyle(color: Colors.black),
                                     ),
                                     Row(
@@ -160,46 +169,80 @@ class HomeScreen extends StatelessWidget {
                     ),
                     pinned: true,
                   ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      if (index == 0) {
-                        return WeatherWidget(
-                          username: state.username,
-                          city: state.city,
-                        );
-                      }
+                  // --- SORTED ANIMAL TILES ---
+                  Builder(
+                    builder: (context) {
+                      // Pair each bovine with its status
+                      final bovineStatusList =
+                          state.bovines.map((bovine) {
+                            final status = state.statuses.firstWhere(
+                              (s) => s.bovineId == bovine.id,
+                              orElse:
+                                  () => BovineStatus(
+                                    bovineId: bovine.id,
+                                    status: 'normal',
+                                  ),
+                            );
+                            return {'bovine': bovine, 'status': status};
+                          }).toList();
 
-                      final bovineIndex = index - 1;
-                      if (bovineIndex >= state.bovines.length) {
-                        return null;
-                      }
+                      // Sort by danger > needs attention > normal
+                      bovineStatusList.sort((a, b) {
+                        int getRank(String status) {
+                          switch (_mapStatusToEnum(status)) {
+                            case AnimalStatus.danger:
+                              return 0;
+                            case AnimalStatus.needsAttention:
+                              return 1;
+                            case AnimalStatus.normal:
+                            default:
+                              return 2;
+                          }
+                        }
 
-                      final bovine = state.bovines[bovineIndex];
-                      final status = state.statuses.firstWhere(
-                        (s) => s.bovineId == bovine.id,
-                        orElse:
-                            () => BovineStatus(
-                              bovineId: bovine.id,
-                              status: 'normal',
-                            ),
+                        final aStatus = (a['status'] as BovineStatus).status;
+                        final bStatus = (b['status'] as BovineStatus).status;
+                        return getRank(aStatus).compareTo(getRank(bStatus));
+                      });
+
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          if (index == 0) {
+                            return WeatherWidget(
+                              username: state.username,
+                              city: state.city,
+                            );
+                          }
+
+                          final bovineIndex = index - 1;
+                          if (bovineIndex >= bovineStatusList.length) {
+                            return null;
+                          }
+
+                          final bovine =
+                              bovineStatusList[bovineIndex]['bovine'] as Bovine;
+                          final status =
+                              bovineStatusList[bovineIndex]['status']
+                                  as BovineStatus;
+
+                          return AnimalTile(
+                            onTap:
+                                () => Navigator.pushNamed(
+                                  context,
+                                  Routes.ANIMAL_SUMMARY,
+                                  arguments: bovine.id.toString(),
+                                ),
+                            name: bovine.name,
+                            status: _mapStatusToEnum(status.status),
+                            lastSeen:
+                                DateTime.now(), // This should come from the API
+                            imageUrl: context
+                                .read<HomeCubit>()
+                                .getBovineImageUrl(bovine.id),
+                          );
+                        }),
                       );
-
-                      return AnimalTile(
-                        onTap:
-                            () => Navigator.pushNamed(
-                              context,
-                              Routes.ANIMAL_SUMMARY,
-                              arguments: bovine.id.toString(),
-                            ),
-                        name: bovine.name,
-                        status: _mapStatusToEnum(status.status),
-                        lastSeen:
-                            DateTime.now(), // This should come from the API
-                        imageUrl: context.read<HomeCubit>().getBovineImageUrl(
-                          bovine.id,
-                        ),
-                      );
-                    }),
+                    },
                   ),
                 ],
               ),
@@ -216,7 +259,7 @@ class HomeScreen extends StatelessWidget {
         return AnimalStatus.normal;
       case 'danger':
         return AnimalStatus.danger;
-      case 'needsAttention':
+      case 'needsattention':
         return AnimalStatus.needsAttention;
       default:
         return AnimalStatus.normal;

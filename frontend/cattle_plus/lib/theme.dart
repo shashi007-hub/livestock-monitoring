@@ -19,7 +19,7 @@ const double labelSmallSize = 11.0;
 final ThemeData appTheme = ThemeData(
   useMaterial3: true, // Recommended for new Flutter projects
   colorScheme: ColorScheme.fromSeed(
-    seedColor: Colors.green, // Example seed color
+    seedColor: const Color.fromARGB(255, 113, 178, 122), // Example seed color
     brightness: Brightness.light,
   ),
   textTheme: TextTheme(
@@ -29,24 +29,60 @@ final ThemeData appTheme = ThemeData(
     // displaySmall: GoogleFonts.roboto(fontSize: 36.0, fontWeight: FontWeight.w400),
 
     // Headline styles
-    headlineLarge: GoogleFonts.lato(fontSize: headlineLargeSize, fontWeight: FontWeight.bold),
-    headlineMedium: GoogleFonts.lato(fontSize: headlineMediumSize, fontWeight: FontWeight.bold),
-    headlineSmall: GoogleFonts.lato(fontSize: headlineSmallSize, fontWeight: FontWeight.bold),
+    headlineLarge: GoogleFonts.lato(
+      fontSize: headlineLargeSize,
+      fontWeight: FontWeight.bold,
+    ),
+    headlineMedium: GoogleFonts.lato(
+      fontSize: headlineMediumSize,
+      fontWeight: FontWeight.bold,
+    ),
+    headlineSmall: GoogleFonts.lato(
+      fontSize: headlineSmallSize,
+      fontWeight: FontWeight.bold,
+    ),
 
     // Title styles
-    titleLarge: GoogleFonts.openSans(fontSize: titleLargeSize, fontWeight: FontWeight.w600),
-    titleMedium: GoogleFonts.openSans(fontSize: titleMediumSize, fontWeight: FontWeight.w600),
-    titleSmall: GoogleFonts.openSans(fontSize: titleSmallSize, fontWeight: FontWeight.w600),
+    titleLarge: GoogleFonts.openSans(
+      fontSize: titleLargeSize,
+      fontWeight: FontWeight.w600,
+    ),
+    titleMedium: GoogleFonts.openSans(
+      fontSize: titleMediumSize,
+      fontWeight: FontWeight.w600,
+    ),
+    titleSmall: GoogleFonts.openSans(
+      fontSize: titleSmallSize,
+      fontWeight: FontWeight.w600,
+    ),
 
     // Body styles
-    bodyLarge: GoogleFonts.roboto(fontSize: bodyLargeSize, fontWeight: FontWeight.normal),
-    bodyMedium: GoogleFonts.roboto(fontSize: bodyMediumSize, fontWeight: FontWeight.normal), // Default text style
-    bodySmall: GoogleFonts.roboto(fontSize: bodySmallSize, fontWeight: FontWeight.normal),
+    bodyLarge: GoogleFonts.roboto(
+      fontSize: bodyLargeSize,
+      fontWeight: FontWeight.normal,
+    ),
+    bodyMedium: GoogleFonts.roboto(
+      fontSize: bodyMediumSize,
+      fontWeight: FontWeight.normal,
+    ), // Default text style
+    bodySmall: GoogleFonts.roboto(
+      fontSize: bodySmallSize,
+      fontWeight: FontWeight.normal,
+    ),
 
     // Label styles (for buttons, captions, etc.)
-    labelLarge: GoogleFonts.roboto(fontSize: labelLargeSize, fontWeight: FontWeight.w500), // Button text style
-    labelMedium: GoogleFonts.roboto(fontSize: labelMediumSize, fontWeight: FontWeight.w500),
-    labelSmall: GoogleFonts.roboto(fontSize: labelSmallSize, fontWeight: FontWeight.w500),
+    labelLarge: GoogleFonts.roboto(
+      fontSize: labelLargeSize,
+      fontWeight: FontWeight.w500,
+    ), // Button text style
+    labelMedium: GoogleFonts.roboto(
+      fontSize: labelMediumSize,
+      fontWeight: FontWeight.w500,
+    ),
+    labelSmall: GoogleFonts.roboto(
+      fontSize: labelSmallSize,
+      fontWeight: FontWeight.w500,
+    ),
   ),
   // You can customize other theme properties here, like:
   // appBarTheme: AppBarTheme(...)

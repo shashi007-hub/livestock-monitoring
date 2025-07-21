@@ -5,6 +5,7 @@ import 'add_animal_states.dart';
 import 'package:http/http.dart' as http;
 import 'package:cattle_plus/env.dart';
 
+
 class AddAnimalCubit extends Cubit<AddAnimalState> {
   AddAnimalCubit() : super(AddAnimalInitial());
 
@@ -17,22 +18,11 @@ class AddAnimalCubit extends Cubit<AddAnimalState> {
     String? motherId,
     required String imageBase64,
   }) async {
-    print("Adding bovine...");
-    print(name);
-    print(age);
-    print(weight);
-    print(breed);
-    print(fatherId);
-    print(motherId);
-    print(imageBase64);
     try {
-      print("inside try");
       emit(AddAnimalLoading());
-      print("inside emit");
-      final box = await Hive.openBox('authBox');
+      final user_Id = await getUserId();
       // final userId = box.get('user_id', defaultValue: 1);
-      final userId = 2;
-      print("hey");
+      final userId = user_Id;
       final response = await http.post(
         Uri.parse('http://$SERVER_URL/bovines/'),
         body: jsonEncode({
@@ -105,3 +95,7 @@ extension BreedTypeExtension on BreedType {
     }
   }
 }
+Future<int> getUserId() async {
+    final box = await Hive.openBox('authBox');
+    return box.get('user_id') ?? 1;
+  }

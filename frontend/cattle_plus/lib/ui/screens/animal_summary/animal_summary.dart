@@ -2,6 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'animal_summary_cubit.dart';
+import 'package:easy_localization/easy_localization.dart';
+
+final Map<String, String> problemKeyMap = {
+  "High distress detected": "health.problem.high_distress_detected",
+  "Abnormal vocalizations indicating distress":
+      "health.problem.abnormal_vocalizations",
+  "Increased heart rate": "health.problem.increased_heart_rate",
+  "Lameness detected": "health.problem.lameness_detected",
+  "Reduced mobility due to lameness": "health.problem.reduced_mobility",
+};
+
+final Map<String, String> solutionKeyMap = {
+  "Check for environmental stressors or health issues":
+      "health.solution.check_environmental_stressors",
+  "Ensure adequate food and water are available":
+      "health.solution.ensure_food_water",
+  "Monitor for signs of illness": "health.solution.monitor_illness",
+  "Inspect hooves and provide necessary treatment":
+      "health.solution.inspect_hooves",
+  "Provide rest and monitor for signs of improvement":
+      "health.solution.provide_rest",
+};
 
 class AnimalSummaryScreen extends StatelessWidget {
   final String bovineId;
@@ -14,10 +36,18 @@ class AnimalSummaryScreen extends StatelessWidget {
       create: (context) => AnimalSummaryCubit()..fetchAnimalDetails(bovineId),
       child: Scaffold(
         appBar: AppBar(
+          elevation: 8,
+          shadowColor: Colors.black26,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           title: Text(
-            'Animal Summary',
-            style: Theme.of(context).textTheme.headlineSmall,
+            'Animal Summary'.tr(),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          iconTheme: const IconThemeData(color: Colors.black87),
         ),
         body: BlocBuilder<AnimalSummaryCubit, AnimalSummaryState>(
           builder: (context, state) {
@@ -60,12 +90,19 @@ class AnimalSummaryScreen extends StatelessWidget {
                         height: 200,
                         width: 200,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                              spreadRadius: 2,
+                            ),
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 30,
+                              offset: const Offset(0, 15),
+                              spreadRadius: 5,
                             ),
                           ],
                         ),
@@ -111,32 +148,144 @@ class AnimalSummaryScreen extends StatelessWidget {
                 // Status Section
                 _buildSection(
                   context,
-                  'Current Status',
+                  'Current Status'.tr(),
                   _getStatusWidget(context, animal.status),
                 ),
 
                 // Health Entries Section
                 if (animal.status != AnimalStatus.allGood)
-                  _buildSection(
-                    context,
-                    'Problems Identified',
-                    Table(
-                      border: TableBorder.all(),
-                      children:
-                          animal.healthEntries.map((entry) {
-                            return TableRow(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Center(child: Text(entry.problem)),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(entry.solution),
+                  Card(
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: _buildSection(
+                        context,
+                        'Problems Identified'.tr(),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.grey[200]!,
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey[100]!,
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
-                            );
-                          }).toList(),
+                            ),
+                            child: Table(
+                              border: TableBorder(
+                                horizontalInside: BorderSide(
+                                  color: Colors.grey[100]!,
+                                  width: 1,
+                                ),
+                              ),
+                              columnWidths: const {
+                                0: FlexColumnWidth(1.5),
+                                1: FlexColumnWidth(2.0),
+                              },
+                              children: [
+                                // Header Row
+                                TableRow(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(12),
+                                      topRight: Radius.circular(12),
+                                    ),
+                                  ),
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0,
+                                        vertical: 12.0,
+                                      ),
+                                      child: Text(
+                                        'Symptom'.tr(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                          color: Colors.black54,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0,
+                                        vertical: 12.0,
+                                      ),
+                                      child: Text(
+                                        'Treatment'.tr(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Data Rows
+                                ...animal.healthEntries.map((entry) {
+                                  final problemKey =
+                                      problemKeyMap[entry.problem] ??
+                                      entry.problem;
+                                  final solutionKey =
+                                      solutionKeyMap[entry.solution] ??
+                                      entry.solution;
+
+                                  return TableRow(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                    ),
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                          vertical: 12.0,
+                                        ),
+                                        child: Text(
+                                          problemKey.tr(),
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.red[400],
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.4,
+                                          ),
+                                          textAlign: TextAlign.left,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                          vertical: 12.0,
+                                        ),
+                                        child: Text(
+                                          solutionKey.tr(),
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.black54,
+                                            fontWeight: FontWeight.w600,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }).toList(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
 
@@ -146,7 +295,7 @@ class AnimalSummaryScreen extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 24.0),
                       child: Text(
-                        'All Good! 🎉',
+                        'All Good! 🎉'.tr(),
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(color: Colors.green[800]),
                       ),
@@ -155,10 +304,18 @@ class AnimalSummaryScreen extends StatelessWidget {
 
                 // Feeding Analysis Graph Section
                 const SizedBox(height: 24),
-                _buildSection(
-                  context,
-                  'Feeding Analysis',
-                  _buildFeedingGraph(animal.feedingAnalysis),
+                Card(
+                  elevation: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: _buildSection(
+                      context,
+                      'Feeding Analysis'.tr(),
+                      _buildFeedingGraph(animal.feedingAnalysis),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -170,12 +327,27 @@ class AnimalSummaryScreen extends StatelessWidget {
 
   Widget _buildFeedingGraph(List<FeedingAnalysis> feedingAnalysis) {
     if (feedingAnalysis.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'No data recorded',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Icon(Icons.bar_chart_outlined, size: 48, color: Colors.grey[400]),
+              const SizedBox(height: 8),
+              Text(
+                'No grazing data recorded'.tr(),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Grazing time data will appear here'.tr(),
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              ),
+            ],
           ),
         ),
       );
@@ -195,118 +367,230 @@ class AnimalSummaryScreen extends StatelessWidget {
         .map((e) => e.avg)
         .reduce((a, b) => a > b ? a : b);
 
-    final maxYWithMargin = maxYValue + 0.2; // Add a small margin for spacing
+    final minYValue = feedingAnalysis
+        .map((e) => e.avg)
+        .reduce((a, b) => a < b ? a : b);
+
+    final maxYWithMargin = maxYValue + (maxYValue * 0.1); // 10% margin
+    final minYWithMargin = (minYValue - (minYValue * 0.1)).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 8.0),
-          child: Text(
-            'Year 2025',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        // Header with summary
+        Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue[200]!, width: 1),
           ),
-        ),
-        feedingAnalysis.isEmpty
-            ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'No data recorded',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              ),
-            )
-            : SizedBox(
-              height: 300,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: true,
-                    verticalInterval: 1,
-                    horizontalInterval: 1,
-                    getDrawingHorizontalLine:
-                        (value) =>
-                            FlLine(color: Colors.grey[300]!, strokeWidth: 1),
-                    getDrawingVerticalLine:
-                        (value) =>
-                            FlLine(color: Colors.grey[300]!, strokeWidth: 1),
-                  ),
-                  titlesData: FlTitlesData(
-                    topTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          if (value > maxYValue)
-                            return const SizedBox.shrink(); // Hide labels beyond maxY
-                          return Text(
-                            '${value.toStringAsFixed(1)}h',
-                            style: const TextStyle(fontSize: 10),
-                          );
-                        },
+          child: Row(
+            children: [
+              Icon(Icons.timeline, color: Colors.blue[600], size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Average Grazing Time'.tr(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          final index = value.toInt();
-                          if (index >= 0 && index < feedingAnalysis.length) {
-                            final date = feedingAnalysis[index].date;
-                            final shortDate = date.substring(5);
-
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                shortDate,
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                            );
-                          }
-                          return const Text('');
-                        },
+                    const SizedBox(height: 4),
+                    Text(
+                      // '${feedingAnalysis.length} days recorded'.tr(),
+                      tr(
+                        'days_recorded',
+                        args: [feedingAnalysis.length.toString()],
                       ),
-                    ),
-                  ),
-                  borderData: FlBorderData(
-                    show: true,
-                    border: Border.all(color: Colors.grey[300]!, width: 1),
-                  ),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: true,
-                      gradient: LinearGradient(
-                        colors: [Colors.blue, Colors.lightBlueAccent],
-                      ),
-                      barWidth: 4,
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.blue.withOpacity(0.3),
-                            Colors.lightBlueAccent.withOpacity(0.1),
-                          ],
-                        ),
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
-                  minX: 0,
-                  maxX: (feedingAnalysis.length - 1).toDouble(),
-                  minY: 0,
-                  maxY: maxYWithMargin, // Add margin to maxY for spacing
                 ),
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${maxYValue.toStringAsFixed(1)} ${tr('h')}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[600],
+                    ),
+                  ),
+                  Text(
+                    'Peak grazing time'.tr(),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Chart
+        Container(
+          height: 280,
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey[200]!,
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: true,
+                verticalInterval: 1,
+                horizontalInterval: 1,
+                getDrawingHorizontalLine:
+                    (value) => FlLine(color: Colors.grey[200]!, strokeWidth: 1),
+                getDrawingVerticalLine:
+                    (value) => FlLine(color: Colors.grey[200]!, strokeWidth: 1),
+              ),
+              titlesData: FlTitlesData(
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 1,
+                    reservedSize: 40,
+                    getTitlesWidget: (value, meta) {
+                      if (value > maxYValue) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Text(
+                          '${value.toStringAsFixed(1)}${tr('h')}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: 1,
+                    reservedSize: 30,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+                      if (index >= 0 && index < feedingAnalysis.length) {
+                        final date = feedingAnalysis[index].date;
+                        final shortDate = date.substring(5); // Remove year
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            shortDate,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: Border.all(color: Colors.grey[300]!, width: 1),
+              ),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: true,
+                  gradient: LinearGradient(
+                    colors: [Colors.blue[400]!, Colors.blue[600]!],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  barWidth: 3,
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, barData, index) {
+                      return FlDotCirclePainter(
+                        radius: 4,
+                        color: Colors.blue[600]!,
+                        strokeWidth: 2,
+                        strokeColor: Colors.white,
+                      );
+                    },
+                  ),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.blue[400]!.withOpacity(0.3),
+                        Colors.blue[600]!.withOpacity(0.1),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+              ],
+              minX: 0,
+              maxX: (feedingAnalysis.length - 1).toDouble(),
+              minY: minYWithMargin,
+              maxY: maxYWithMargin,
             ),
+          ),
+        ),
+
+        // Legend
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.blue[600],
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Daily Grazing Time (Hours)'.tr(),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -314,11 +598,11 @@ class AnimalSummaryScreen extends StatelessWidget {
   Color _getBackgroundColor(AnimalStatus status) {
     switch (status) {
       case AnimalStatus.needsImmediateAttention:
-        return Colors.red[100]!;
+        return const Color.fromARGB(255, 255, 245, 245)!;
       case AnimalStatus.needsAttention:
-        return Colors.yellow[100]!;
+        return const Color.fromARGB(255, 244, 238, 208)!;
       case AnimalStatus.allGood:
-        return Colors.green[100]!;
+        return const Color.fromARGB(255, 226, 247, 227)!;
     }
   }
 
@@ -332,7 +616,6 @@ class AnimalSummaryScreen extends StatelessWidget {
           const SizedBox(height: 8),
           content,
           const SizedBox(height: 8),
-          const Divider(),
         ],
       ),
     );
@@ -345,18 +628,18 @@ class AnimalSummaryScreen extends StatelessWidget {
 
     switch (status) {
       case AnimalStatus.needsImmediateAttention:
-        color = Colors.red;
-        text = 'Needs Immediate Attention';
+        color = const Color.fromARGB(255, 226, 45, 32);
+        text = 'Needs Immediate Attention'.tr();
         icon = Icons.error;
         break;
       case AnimalStatus.needsAttention:
         color = Colors.orange;
-        text = 'Needs Attention';
+        text = 'Needs Attention'.tr();
         icon = Icons.warning;
         break;
       case AnimalStatus.allGood:
         color = Colors.green;
-        text = 'All Good';
+        text = 'All Good'.tr();
         icon = Icons.check_circle;
         break;
     }

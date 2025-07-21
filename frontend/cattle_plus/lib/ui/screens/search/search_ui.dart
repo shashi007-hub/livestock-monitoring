@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'sms_alert_cubit.dart'; // Adjust path accordingly
 import 'sms_alert_state.dart'; // Adjust path accordingly
+import 'package:easy_localization/easy_localization.dart';
 
 class SearchUI extends StatefulWidget {
   const SearchUI({super.key});
@@ -30,13 +31,13 @@ class _SearchUIState extends State<SearchUI> {
     final difference = currentDate.difference(messageDate);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+      return '${difference.inDays} ${difference.inDays > 1 ? 'days'.tr() : 'day'.tr()} ${'ago'.tr()}';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+      return '${difference.inHours} ${difference.inHours > 1 ? 'hours'.tr() : 'hour'.tr()} ${'ago'.tr()}';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
+      return '${difference.inMinutes} ${difference.inMinutes > 1 ? 'minutes'.tr() : 'minute'.tr()} ${'ago'.tr()}';
     } else {
-      return 'Just now';
+      return 'Just now'.tr();
     }
   }
 
@@ -52,7 +53,7 @@ class _SearchUIState extends State<SearchUI> {
             ),
             SizedBox(width: 8),
             Text(
-              'SMS Alert History',
+              'sms_alert_history'.tr(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
           ],
@@ -128,30 +129,26 @@ class MessageTile extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 8),
+              Text(
+                '${'Sent at'.tr()}: ${_formatTimestamp(timestamp)}',
+                style: TextStyle(fontSize: 15, color: Colors.black38),
+              ),
+              SizedBox(height: 8),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(
-                    'Sent at: ${_formatTimestamp(timestamp)}',
-                    style: TextStyle(fontSize: 15, color: Colors.black38),
+                  Icon(
+                    Icons.access_time,
+                    size: 18,
+                    color: const Color.fromARGB(180, 182, 51, 51),
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 18,
-                        color: const Color.fromARGB(180, 182, 51, 51),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        relativeTime,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: const Color.fromARGB(180, 182, 51, 51),
-                        ),
-                      ),
-                    ],
+                  SizedBox(width: 4),
+                  Text(
+                    relativeTime,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: const Color.fromARGB(180, 182, 51, 51),
+                    ),
                   ),
                 ],
               ),

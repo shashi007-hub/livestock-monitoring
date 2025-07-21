@@ -253,22 +253,45 @@ def get_home_data(user_id: int, db: Session = Depends(get_db)):
     print("distress_calls",distress_calls)
     print("lameness_inferences",lameness_inferences)
     
-    # Dummy data for the sake of example
+    # Calculate grazing volume dynamically using FeedingAnalytics
+    grazing_volume = 0
+    try:
+        # Get all bovine IDs for this user
+        bovine_ids = [bovine.id for bovine in bovines]
+        
+        # Query FeedingAnalytics for all bovines belonging to this user
+        # Calculate sum of (feeding_rate * average_feeding_time) for all records
+        feeding_analytics = db.query(FeedingAnalytics).filter(
+            FeedingAnalytics.bovine_id.in_(bovine_ids)
+        ).all()
+        
+        # Calculate total grazing volume
+        for feeding in feeding_analytics:
+            grazing_volume += feeding.feeding_rate * feeding.average_feeding_time
+        
+        # Convert to integer for response
+        grazing_volume = int(grazing_volume)
+        
+    except Exception as e:
+        print("Error calculating grazing volume:", e)
+        grazing_volume = 0  # Default to 0 if calculation fails
+    
+    # Calculate anomalies as count of bovines with "danger" status
     anamalies = 0
     avg_steps = 0
-    grazing_volume = 2500
     try:
-        anamalies = db.query(SMSAlerts).filter(SMSAlerts.user_id == user_id).count()
+        # Count bovines with "danger" status
+        anamalies = sum(1 for status in status_list if status["status"] == "danger")
         avg_steps = (sum(bovine.avg_steps for bovine in bovines) / len(bovines)) if len(bovines)>0 else 0
     except Exception as e:
-        print("Error fetching data:", e.with_traceback())
+        print("Error fetching data:", e)
         raise HTTPException(status_code=500, detail="Error fetching data")
     
     
     return HomeResponse(
         anamalies=anamalies,
-        avg_steps=avg_steps,
-        grazing_volume=grazing_volume,
+        avg_steps=int(avg_steps),
+        grazing_volume=int(grazing_volume),
         bovines=bovines,
         status=status_list
     )
@@ -435,7 +458,7 @@ def get_bovine_details(bovine_id: int, db: Session = Depends(get_db)):
     }
 
 @router.get("/users/{user_id}/smsalerts")
-def get_sms_alerts(user_id: int, db: Session = Depends(get_db)):
+def get_user_sms_alerts(user_id: int, db: Session = Depends(get_db)):
     alerts = db.query(SMSAlerts).filter(SMSAlerts.user_id == user_id).all()
     if not alerts:
         raise HTTPException(status_code=404, detail="No SMS alerts found for this user")
